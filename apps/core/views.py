@@ -1,4 +1,46 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+from apps.projetos.models import Projeto, Pessoa
+from apps.bolsas.models import Bolsa
+from apps.editais.models import Edital
+
+
 def index(request):
+    """Página inicial (pública)."""
+    if request.user.is_authenticated:
+        return render(request, 'core/index.html')
     return render(request, 'core/index.html')
+
+
+@login_required
+def dashboard(request):
+    """Painel do usuário autenticado com resumo de dados conforme seu perfil."""
+    perfil = getattr(request.user, 'perfil', None)
+    contexto = {
+        'perfil': perfil,
+        'e_superuser': request.user.is_superuser,
+    }
+
+    # Dados visíveis conforme nível hierárquico
+    if request.user.is_superuser or (perfil and perfil.pelo_menos('tecnico')):
+        contexto.update({
+            'total_projetos': Projeto.objects.count(),
+            'total_bolsas': Bolsa.objects.filter(status='ativa').count(),
+            'total_editais': Edital.objects.count(),
+            'total_pessoas': Pessoa.objects.count(),
+            'mostrar_tudo': True,
+        })
+    elif perfil and perfil.perfil == 'docente':
+        # Docente vê apenas seus projetos
+        meus_projetos = Projeto.objects.filter(coordenador__email=request.user.email)
+        contexto.update({
+            'meus_projetos': meus_projetos,
+            'total_projetos': meus_projetos.count(),
+            'mostrar_meus_projetos': True,
+        })
+    else:
+        # Aluno: vê apenas sua bolsa e relatórios
+        contexto.update({'mostrar_aluno': True})
+
+    return render(request, 'core/dashboard.html', contexto)

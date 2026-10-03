@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Painel{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Olá, {{ user.get_full_name|default:user.username }}!</h2>
+    {% if perfil %}
+        <p>Perfil: <span class="badge">{{ perfil.get_perfil_display }}</span></p>
+    {% elif e_superuser %}
+        <p>Perfil: <span class="badge">Administrador</span></p>
+    {% else %}
+        <p style="color:#b71c1c;">Seu usuário não possui perfil de acesso definido. Procure a DIP.</p>
+    {% endif %}
+</div>
+
+{% if mostrar_tudo %}
+<div class="card">
+    <h2>Visão geral</h2>
+    <div class="stats">
+        <div class="stat"><div class="num">{{ total_projetos }}</div><div class="label">Projetos</div></div>
+        <div class="stat"><div class="num">{{ total_bolsas }}</div><div class="label">Bolsas ativas</div></div>
+        <div class="stat"><div class="num">{{ total_editais }}</div><div class="label">Editais</div></div>
+        <div class="stat"><div class="num">{{ total_pessoas }}</div><div class="label">Pessoas</div></div>
+    </div>
+</div>
+{% endif %}
+
+{% if mostrar_meus_projetos %}
+<div class="card">
+    <h2>Meus projetos ({{ total_projetos }})</h2>
+    {% if meus_projetos %}
+        <table>
+            <tr><th>Código</th><th>Título</th><th>Status</th></tr>
+            {% for projeto in meus_projetos %}
+            <tr>
+                <td>{{ projeto.codigo }}</td>
+                <td>{{ projeto.titulo }}</td>
+                <td><span class="badge">{{ projeto.get_status_display }}</span></td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Você ainda não possui projetos como coordenador.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if mostrar_aluno %}
+<div class="card">
+    <h2>Minha área</h2>
+    <p>Aqui serão exibidos seu plano de trabalho, relatórios e comprovantes.</p>
+</div>
+{% endif %}
+{% endblock %}

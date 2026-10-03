@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Entrar{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 420px; margin: 0 auto;">
+    <h2>Entrar no sistema</h2>
+
+    {% if form.errors %}
+        <div class="alert-error">
+            Usuário ou senha inválidos. Tente novamente.
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <p>
+            <label for="id_username">Usuário</label>
+            <input type="text" name="username" id="id_username" required autofocus>
+        </p>
+        <p>
+            <label for="id_password">Senha</label>
+            <input type="password" name="password" id="id_password" required>
+        </p>
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit" class="btn">Entrar</button>
+    </form>
+</div>
+{% endblock %}

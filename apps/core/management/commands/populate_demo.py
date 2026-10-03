@@ -51,7 +51,54 @@ class Command(BaseCommand):
         self.criar_comprovantes(bolsas, projetos, alunos, docentes)
         self.stdout.write(f'  ✓ Comprovantes criados')
 
+        usuarios = self.criar_usuarios_demo(alunos, docentes)
+        self.stdout.write(f'  ✓ {len(usuarios)} usuários demo criados')
+
         self.stdout.write(self.style.SUCCESS('População concluída com sucesso!'))
+
+    def criar_usuarios_demo(self, alunos, docentes):
+        """Cria um usuário demo por perfil de acesso (senha: demo123)."""
+        from django.contrib.auth.models import User
+        from apps.core.models import Perfil
+
+        usuarios = []
+
+        def get_or_create_user(username, email):
+            user, created = User.objects.get_or_create(
+                username=username,
+                defaults={'email': email},
+            )
+            if created:
+                user.set_password('demo123')
+                user.save()
+            return user
+
+        # Aluno
+        u = get_or_create_user('aluno1', 'aluno1@alunos.edu.br')
+        Perfil.objects.get_or_create(user=u, defaults={'perfil': Perfil.PERFIL_ALUNO, 'pessoa': alunos[0] if alunos else None})
+        usuarios.append('aluno1')
+
+        # Docente (vinculado ao primeiro docente, que é coordenador de projetos)
+        u = get_or_create_user('docente1', 'docente1@unifei.edu.br')
+        Perfil.objects.get_or_create(user=u, defaults={'perfil': Perfil.PERFIL_DOCENTE, 'pessoa': docentes[0] if docentes else None})
+        usuarios.append('docente1')
+
+        # Técnico administrativo
+        u = get_or_create_user('tecnico1', 'tecnico1@unifei.edu.br')
+        Perfil.objects.get_or_create(user=u, defaults={'perfil': Perfil.PERFIL_TECNICO})
+        usuarios.append('tecnico1')
+
+        # Diretor de Pesquisa
+        u = get_or_create_user('diretor1', 'diretor1@unifei.edu.br')
+        Perfil.objects.get_or_create(user=u, defaults={'perfil': Perfil.PERFIL_DIRETOR})
+        usuarios.append('diretor1')
+
+        # Pro-reitor
+        u = get_or_create_user('proreitor1', 'proreitor1@unifei.edu.br')
+        Perfil.objects.get_or_create(user=u, defaults={'perfil': Perfil.PERFIL_PROREITOR})
+        usuarios.append('proreitor1')
+
+        return usuarios
 
     def criar_instituicoes(self):
         instituicoes_data = [

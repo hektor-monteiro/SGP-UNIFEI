@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SGP-UNIFEI{% endblock %} | Sistema de Gestão de Pesquisa</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background-color: #003366;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 { font-size: 1.4rem; }
+        header h1 a { color: white; text-decoration: none; }
+        nav a {
+            color: #cde;
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 0.95rem;
+        }
+        nav a:hover { color: white; text-decoration: underline; }
+        main {
+            flex: 1;
+            max-width: 1100px;
+            width: 100%;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .card h2 { color: #003366; margin-bottom: 15px; }
+        .stats { display: flex; gap: 20px; flex-wrap: wrap; }
+        .stat {
+            background: #f0f4f8;
+            border-radius: 8px;
+            padding: 20px;
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+        }
+        .stat .num { font-size: 2rem; font-weight: bold; color: #003366; }
+        .stat .label { font-size: 0.85rem; color: #666; margin-top: 5px; }
+        .btn {
+            display: inline-block;
+            background-color: #003366;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+        .btn:hover { background-color: #004488; }
+        .badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            background: #e0e7ef;
+            color: #003366;
+        }
+        .alert-error {
+            background: #fdecea;
+            color: #b71c1c;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        form p { margin-bottom: 15px; }
+        form label { display: block; margin-bottom: 5px; font-weight: bold; }
+        form input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        footer {
+            background: #eee;
+            text-align: center;
+            padding: 15px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f0f4f8; color: #003366; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><a href="{% url 'index' %}">SGP-UNIFEI</a></h1>
+        <nav>
+            {% if user.is_authenticated %}
+                <a href="{% url 'dashboard' %}">Painel</a>
+                <span style="color:#9bd;">{{ user.username }}{% if user.perfil %} <span class="badge">{{ user.perfil.get_perfil_display }}</span>{% endif %}</span>
+                <a href="{% url 'logout' %}">Sair</a>
+            {% else %}
+                <a href="{% url 'login' %}">Entrar</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="card" style="border-left: 4px solid {% if message.tags == 'error' %}#b71c1c{% elif message.tags == 'success' %}#2e7d32{% else %}#003366{% endif %};">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        Universidade Federal de Itajubá — Diretoria de Pesquisa e Inovação
+    </footer>
+</body>
+</html>
