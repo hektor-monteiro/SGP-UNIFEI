@@ -111,6 +111,7 @@
         <nav>
             {% if user.is_authenticated %}
                 <a href="{% url 'dashboard' %}">Painel</a>
+                <a href="{% url 'projetos_lista' %}">Projetos</a>
                 <span style="color:#9bd;">{{ user.username }}{% if user.perfil %} <span class="badge">{{ user.perfil.get_perfil_display }}</span>{% endif %}</span>
                 <form method="post" action="{% url 'logout' %}" style="display:inline;">
                     {% csrf_token %}

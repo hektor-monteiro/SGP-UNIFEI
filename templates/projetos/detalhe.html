@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}{{ projeto.codigo }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h2 style="margin-bottom:5px;">{{ projeto.codigo }}</h2>
+            <p style="font-size:1.05rem;">{{ projeto.titulo }}</p>
+        </div>
+        <div style="text-align:right;">
+            <span class="badge">{{ projeto.get_status_display }}</span>
+            {% if pode_editar %}
+                <p style="margin-top:10px;"><a href="{% url 'projeto_editar' projeto.pk %}" class="btn">Editar</a></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Informações</h2>
+    <table>
+        <tr><th style="width:220px;">Coordenador</th><td>{{ projeto.coordenador.nome|default:"—" }}</td></tr>
+        <tr><th>Instituição</th><td>{{ projeto.instituicao|default:"—" }}</td></tr>
+        <tr><th>Registro</th><td>{{ projeto.data_registro|date:"d/m/Y" }}</td></tr>
+        <tr><th>Início</th><td>{{ projeto.data_inicio|date:"d/m/Y" }}</td></tr>
+        <tr><th>Término</th><td>{{ projeto.data_termino|date:"d/m/Y"|default:"—" }}</td></tr>
+        <tr><th>Fomentador</th><td>{{ projeto.fomentador|default:"Sem fomento externo" }}</td></tr>
+        <tr><th>Recursos internos</th><td>{% if projeto.recursos_internos %}R$ {{ projeto.recursos_internos }}{% else %}—{% endif %}</td></tr>
+        <tr><th>Recursos externos</th><td>{% if projeto.recursos_externos %}R$ {{ projeto.recursos_externos }}{% else %}—{% endif %}</td></tr>
+        <tr><th>Processo SIPAC</th><td>{{ projeto.processo_sipac|default:"—" }}</td></tr>
+        {% if projeto.descricao %}
+        <tr><th>Descrição</th><td>{{ projeto.descricao|linebreaksbr }}</td></tr>
+        {% endif %}
+    </table>
+</div>
+
+<div class="card">
+    <h2>Equipe ({{ membros|length }})</h2>
+    {% if membros %}
+    <table>
+        <tr><th>Nome</th><th>Função</th><th>Carga horária</th><th>Entrada</th></tr>
+        {% for membro in membros %}
+        <tr>
+            <td>{{ membro.pessoa.nome }}</td>
+            <td><span class="badge">{{ membro.get_funcao_display }}</span></td>
+            <td>{% if membro.carga_horaria %}{{ membro.carga_horaria }}h{% else %}—{% endif %}</td>
+            <td>{{ membro.data_entrada|date:"d/m/Y" }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>Nenhum membro registrado.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Bolsas ({{ bolsas|length }})</h2>
+    {% if bolsas %}
+    <table>
+        <tr><th>Aluno</th><th>Modalidade</th><th>Fomentador</th><th>Período</th><th>Status</th></tr>
+        {% for bolsa in bolsas %}
+        <tr>
+            <td>{{ bolsa.aluno.nome }}</td>
+            <td>{{ bolsa.modalidade.sigla }}</td>
+            <td>{{ bolsa.fomentador.sigla|default:"—" }}</td>
+            <td>{{ bolsa.data_inicio|date:"d/m/Y" }} — {{ bolsa.data_fim|date:"d/m/Y" }}</td>
+            <td><span class="badge">{{ bolsa.get_status_display }}</span></td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>Nenhuma bolsa vinculada.</p>
+    {% endif %}
+</div>
+
+<p><a href="{% url 'projetos_lista' %}" style="color:#003366;">← Voltar à lista</a></p>
+{% endblock %}

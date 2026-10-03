@@ -205,7 +205,7 @@ class Command(BaseCommand):
                     'data_inicio': datetime.now() - timedelta(days=random.randint(10, 180)),
                     'data_termino': datetime.now() + timedelta(days=random.randint(30, 365)),
                     'status': random.choice(['vigente', 'vigente', 'vigente', 'expirado']),
-                    'coordenador': random.choice(docentes),
+                    'coordenador': docentes[i % len(docentes)],
                     'instituicao': random.choice(instituicoes),
                     'fomentador': random.choice(fomentadores) if random.random() > 0.3 else None,
                 }

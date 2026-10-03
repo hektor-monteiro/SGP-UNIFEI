@@ -1,0 +1,173 @@
+"""Views do módulo de Projetos.
+
+Regras de acesso:
+- Lista/Detalhe: todos os autenticados; alunos veem apenas seus projetos.
+- Criação: docente (vira coordenador), técnico, diretor, pro-reitor.
+- Edição: coordenador do projeto, técnico, diretor, pro-reitor.
+"""
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404, redirect, render
+
+from apps.core.models import Perfil
+
+from .forms import ProjetoForm
+from .models import Projeto
+
+
+def _perfil_de(user):
+    """None = superusuário. Usuário autenticado SEM perfil → PermissionDenied.
+
+    Isso impede que usuários sem Perfil recebam acesso por engano.
+    """
+    if user.is_superuser:
+        return None
+    try:
+        return user.perfil
+    except Perfil.DoesNotExist:
+        raise PermissionDenied('Seu usuário não possui perfil de acesso. Procure a DIP.')
+
+
+def _pode_gerir(perfil) -> bool:
+    """Técnico, diretor e pro-reitor gerenciam todos os processos."""
+    return perfil is None or perfil.pelo_menos(Perfil.PERFIL_TECNICO)
+
+
+def _pode_editar(user, projeto) -> bool:
+    """Edita quem pode gerir ou o próprio coordenador."""
+    perfil = _perfil_de(user)
+    if _pode_gerir(perfil):
+        return True
+    if perfil and perfil.pessoa and projeto.coordenador_id == perfil.pessoa.id:
+        return True
+    return False
+
+
+def _pode_criar(user) -> bool:
+    """Docente (qualquer técnico+) pode criar projetos."""
+    perfil = _perfil_de(user)
+    if _pode_gerir(perfil):
+        return True
+    return perfil is not None and perfil.perfil == Perfil.PERFIL_DOCENTE
+
+
+def _visiveis_para(user):
+    """Projetos visíveis: aluno vê apenas os que participa."""
+    projetos = Projeto.objects.select_related(
+        'coordenador', 'instituicao', 'fomentador',
+    )
+    perfil = _perfil_de(user)
+    if perfil and perfil.perfil == Perfil.PERFIL_ALUNO:
+        if perfil.pessoa:
+            return projetos.filter(membros__pessoa=perfil.pessoa).distinct()
+        return projetos.none()
+    return projetos
+
+
+@login_required
+def lista(request):
+    """Lista de projetos com filtros por status e instituto."""
+    projetos = _visiveis_para(request.user)
+
+    status = request.GET.get('status', '')
+    instituto = request.GET.get('instituto', '')
+    busca = request.GET.get('q', '')
+
+    if status:
+        projetos = projetos.filter(status=status)
+    if instituto:
+        projetos = projetos.filter(instituicao__sigla=instituto)
+    if busca:
+        projetos = projetos.filter(titulo__icontains=busca)
+
+    from apps.core.models import Instituicao
+
+    contexto = {
+        'projetos': projetos.order_by('-data_registro'),
+        'filtros': {'status': status, 'instituto': instituto, 'q': busca},
+        'status_choices': Projeto._meta.get_field('status').choices,
+        'instituicoes': Instituicao.objects.filter(ativo=True),
+        'pode_criar': _pode_criar(request.user),
+    }
+    return render(request, 'projetos/lista.html', contexto)
+
+
+@login_required
+def detalhe(request, pk):
+    """Detalhe do projeto com equipe e bolsas."""
+    projeto = get_object_or_404(
+        Projeto.objects.select_related('coordenador', 'instituicao', 'fomentador', 'processo_sipac'),
+        pk=pk,
+    )
+
+    perfil = _perfil_de(request.user)
+    # Aluno só vê projetos dos quais participa
+    if perfil and perfil.perfil == Perfil.PERFIL_ALUNO:
+        if not projeto.membros.filter(pessoa=perfil.pessoa).exists():
+            raise PermissionDenied
+
+    contexto = {
+        'projeto': projeto,
+        'membros': projeto.membros.select_related('pessoa').order_by('funcao'),
+        'bolsas': projeto.bolsas.select_related('aluno', 'modalidade', 'fomentador').all(),
+        'pode_editar': _pode_editar(request.user, projeto),
+    }
+    return render(request, 'projetos/detalhe.html', contexto)
+
+
+@login_required
+def novo(request):
+    """Criação de projeto."""
+    if not _pode_criar(request.user):
+        raise PermissionDenied
+
+    perfil = _perfil_de(request.user)
+    docente_vinculado = (
+        perfil is not None
+        and perfil.perfil == Perfil.PERFIL_DOCENTE
+        and perfil.pessoa
+    )
+
+    if request.method == 'POST':
+        form = ProjetoForm(request.POST)
+        if docente_vinculado:
+            # Docente sempre coordena seu próprio projeto (campo desabilitado)
+            form.fields['coordenador'].disabled = True
+            form.fields["coordenador"].initial = perfil.pessoa.pk
+        if form.is_valid():
+            projeto = form.save()
+            messages.success(request, f'Projeto {projeto.codigo} criado com sucesso.')
+            return redirect('projeto_detalhe', pk=projeto.pk)
+    else:
+        form = ProjetoForm()
+        if docente_vinculado:
+            form.fields['coordenador'].disabled = True
+            form.fields["coordenador"].initial = perfil.pessoa.pk
+
+    return render(request, 'projetos/form.html', {
+        'form': form,
+        'titulo': 'Novo projeto',
+    })
+
+
+@login_required
+def editar(request, pk):
+    """Edição de projeto."""
+    projeto = get_object_or_404(Projeto, pk=pk)
+    if not _pode_editar(request.user, projeto):
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        form = ProjetoForm(request.POST, instance=projeto)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Projeto {projeto.codigo} atualizado com sucesso.')
+            return redirect('projeto_detalhe', pk=projeto.pk)
+    else:
+        form = ProjetoForm(instance=projeto)
+
+    return render(request, 'projetos/form.html', {
+        'form': form,
+        'titulo': f'Editar projeto {projeto.codigo}',
+    })

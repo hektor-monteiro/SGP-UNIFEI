@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Projetos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Projetos de Pesquisa ({{ projetos|length }})</h2>
+        {% if pode_criar %}
+            <a href="{% url 'projeto_novo' %}" class="btn">+ Novo projeto</a>
+        {% endif %}
+    </div>
+
+    <form method="get" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label style="font-size:0.85rem;">Busca</label>
+            <input type="text" name="q" value="{{ filtros.q }}" placeholder="Título do projeto" style="width:220px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem;">Status</label>
+            <select name="status" style="padding:9px; border:1px solid #ccc; border-radius:4px;">
+                <option value="">— Todos —</option>
+                {% for valor, rotulo in status_choices %}
+                    <option value="{{ valor }}" {% if filtros.status == valor %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem;">Instituto</label>
+            <select name="instituto" style="padding:9px; border:1px solid #ccc; border-radius:4px;">
+                <option value="">— Todos —</option>
+                {% for inst in instituicoes %}
+                    <option value="{{ inst.sigla }}" {% if filtros.instituto == inst.sigla %}selected{% endif %}>{{ inst.sigla }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn">Filtrar</button>
+        {% if filtros.q or filtros.status or filtros.instituto %}
+            <a href="{% url 'projetos_lista' %}" style="color:#003366;">Limpar</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    {% if projetos %}
+        <table>
+            <tr>
+                <th>Código</th>
+                <th>Título</th>
+                <th>Coordenador</th>
+                <th>Instituto</th>
+                <th>Fomento</th>
+                <th>Status</th>
+            </tr>
+            {% for projeto in projetos %}
+            <tr>
+                <td><a href="{% url 'projeto_detalhe' projeto.pk %}" style="color:#003366; font-weight:bold;">{{ projeto.codigo }}</a></td>
+                <td>{{ projeto.titulo|truncatechars:60 }}</td>
+                <td>{{ projeto.coordenador.nome|default:"—" }}</td>
+                <td>{{ projeto.instituicao.sigla|default:"—" }}</td>
+                <td>{{ projeto.fomentador.sigla|default:"Interno" }}</td>
+                <td><span class="badge">{{ projeto.get_status_display }}</span></td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Nenhum projeto encontrado.</p>
+    {% endif %}
+</div>
+{% endblock %}
