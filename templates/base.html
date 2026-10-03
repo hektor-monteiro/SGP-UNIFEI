@@ -112,7 +112,10 @@
             {% if user.is_authenticated %}
                 <a href="{% url 'dashboard' %}">Painel</a>
                 <span style="color:#9bd;">{{ user.username }}{% if user.perfil %} <span class="badge">{{ user.perfil.get_perfil_display }}</span>{% endif %}</span>
-                <a href="{% url 'logout' %}">Sair</a>
+                <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" style="background:none; border:none; color:#cde; cursor:pointer; font-size:0.95rem; margin-left:20px; padding:0; font-family:inherit;" onmouseover="this.style.color='#fff'; this.style.textDecoration='underline'" onmouseout="this.style.color='#cde'; this.style.textDecoration='none'">Sair</button>
+                </form>
             {% else %}
                 <a href="{% url 'login' %}">Entrar</a>
             {% endif %}
