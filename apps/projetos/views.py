@@ -83,12 +83,24 @@ def lista(request):
 
     from apps.core.models import Instituicao
 
+    # Quem pode editar cada projeto da lista (docente: só os seus)
+    perfil = _perfil_de(request.user)
+    pode_gerir = _pode_gerir(perfil)
+    if pode_gerir:
+        editaveis = set()
+    else:
+        editaveis = set(
+            projetos.filter(coordenador=perfil.pessoa).values_list('pk', flat=True)
+        ) if perfil and perfil.pessoa else set()
+
     contexto = {
         'projetos': projetos.order_by('-data_registro'),
         'filtros': {'status': status, 'instituto': instituto, 'q': busca},
         'status_choices': Projeto._meta.get_field('status').choices,
         'instituicoes': Instituicao.objects.filter(ativo=True),
         'pode_criar': _pode_criar(request.user),
+        'pode_gerir': pode_gerir,
+        'editaveis': editaveis,
     }
     return render(request, 'projetos/lista.html', contexto)
 

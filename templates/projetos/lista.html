@@ -51,6 +51,7 @@
                 <th>Instituto</th>
                 <th>Fomento</th>
                 <th>Status</th>
+                <th>Ação</th>
             </tr>
             {% for projeto in projetos %}
             <tr>
@@ -60,6 +61,13 @@
                 <td>{{ projeto.instituicao.sigla|default:"—" }}</td>
                 <td>{{ projeto.fomentador.sigla|default:"Interno" }}</td>
                 <td><span class="badge">{{ projeto.get_status_display }}</span></td>
+                <td>
+                    {% if pode_gerir or projeto.pk in editaveis %}
+                        <a href="{% url 'projeto_editar' projeto.pk %}" style="color:#003366;">Editar</a>
+                    {% else %}
+                        <a href="{% url 'projeto_detalhe' projeto.pk %}" style="color:#666;">Ver</a>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </table>
