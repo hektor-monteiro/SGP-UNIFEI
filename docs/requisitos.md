@@ -113,11 +113,99 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Perfil de acesso
 - Vínculo com pessoa (aluno, docente, técnico, etc.)
 
+### 3.14 Instituto/Departamento
+- Unidade acadêmica vinculada ao projeto ou membro
+- Exemplos: IMC, ISEE, IFQ, IRN, EXCEN/PROEX
+- Usado para agrupar projetos e indicadores
+
+### 3.15 Processo SIPAC
+- Número do processo administrativo federal (SIPAC)
+- Vinculado ao projeto
+- Formato: número único por projeto
+
+### 3.16 Avaliação de Relatório
+- Nota quantitativa (ex: 9.8, 9.1, 8.5)
+- Observações sobre entrega de relatório
+- Vinculada ao projeto e ao membro avaliador
+
 ---
 
-## 4. Indicadores e Relatórios
+## 4. Análise da Planilha Atual (Dados Existentes)
 
-### Indicadores Governamentais e de Agências de Fomento
+### 4.1 Estrutura da Planilha
+
+A planilha atual possui **4 abas**:
+
+| Aba | Registros | Descrição |
+|-----|-----------|-----------|
+| **GERAL** | 2.853 linhas | Projetos ativos/vigentes |
+| **ARQUIVADOSEXPIRADOS** | 4.424 linhas | Projetos arquivados ou expirados |
+| **Página20** | 1.507 linhas | Projetos mais recentes (com códigos novos) |
+| **CANCELADOS** | 1.013 linhas | Projetos cancelados |
+
+### 4.2 Colunas Reais (Campos Existentes)
+
+```
+Código | Título do Projeto | Data de Registro | Início | Término | Status
+Financiador | Recursos Internos | Recursos Externos | Participação início e fim
+Equipe | Matrícula | Instituto Vinculado | Função | Carga Horária
+Nº Processo SIPAC | Entrega de relatório (observações) | Nota
+```
+
+### 4.3 Descobertas Importantes
+
+**1. Cada linha = um membro da equipe (não um projeto)**
+- Um projeto com 5 membros ocupa 5 linhas
+- Os dados do projeto se repetem em cada linha
+- Isso indica que a estrutura real é: Projeto 1:N Membros
+
+**2. Funções identificadas na planilha:**
+- `Coordenador`
+- `Docente`
+- `Docente externo`
+- `Discente`
+
+**3. Códigos de projeto:**
+- Antigos: números simples (642, 645, etc.)
+- Novos: formato `PVDI494-2024`, `PIDI239-2022` (sigla + número + ano)
+
+**4. Nº Processo SIPAC** — sistema administrativo federal (processo físico/digital)
+
+**5. Campo "Nota"** — avaliação quantitativa (ex: 9.8, 9.1, 8.5)
+
+**6. Campo "Entrega de relatório"** — texto livre com observações
+
+**7. Problemas de qualidade de dados:**
+- Datas armazenadas como números seriais em algumas células
+- Campo "Participação início e fim" como texto livre (ex: "12/2017 a 05/2024")
+- Colunas vazias além da coluna 17 (a maioria das 87 colunas está vazia)
+
+### 4.4 Comparação: Modelo Proposto vs. Realidade
+
+| Aspecto | Modelo Proposto | Realidade (Planilha) |
+|---------|-----------------|----------------------|
+| **Estrutura** | Uma linha por projeto | Uma linha por membro da equipe |
+| **Financiador** | Entidade separada | Texto livre na coluna |
+| **Recursos** | Não detalhado | Recursos Internos + Recursos Externos (valores) |
+| **Avaliação** | Entidade separada | Coluna "Nota" + texto de observações |
+| **Processo** | Não mapeado | Nº Processo SIPAC |
+| **Instituto** | Não mapeado | Coluna "Instituto Vinculado" |
+| **Carga horária** | Não mapeado | Coluna "Carga Horária" |
+| **Matrícula** | Não mapeado | Coluna "Matrícula" |
+
+### 4.5 Entidades Adicionais Identificadas
+
+Com base na planilha, identificamos entidades que não estavam no modelo inicial:
+
+1. **Instituto/Departamento** — "Instituto Vinculado" (IMC, ISEE, IFQ, IRN, etc.)
+2. **Processo SIPAC** — número de processo administrativo federal
+3. **Avaliação de Relatório** — nota + observações sobre entrega
+
+---
+
+## 5. Indicadores e Relatórios
+
+### 5.1 Indicadores Governamentais e de Agências de Fomento
 - Número de bolsas por modalidade e fomentador
 - Número de projetos por departamento/área do conhecimento
 - Taxa de conclusão de projetos
@@ -127,7 +215,7 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Número de membros externos em equipes
 - Execução orçamentária
 
-### Indicadores de Efetividade
+### 5.2 Indicadores de Efetividade
 - Evolução temporal de projetos e bolsas
 - Taxa de sucesso em editais
 - Tempo médio de conclusão de projetos
@@ -136,7 +224,7 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 
 ---
 
-## 5. Conformidade com LGPD
+## 6. Conformidade com LGPD
 
 - Consentimento explícito para coleta de dados
 - Minimização de dados (coletar apenas o necessário)
@@ -149,7 +237,7 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 
 ---
 
-## 6. Stack Tecnológica
+## 7. Stack Tecnológica
 
 | Camada | Tecnologia |
 |--------|------------|
@@ -163,7 +251,7 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 
 ---
 
-## 7. Fases de Desenvolvimento
+## 8. Fases de Desenvolvimento
 
 ### Fase 1 — Levantamento de Requisitos ✓
 - [x] Mapeamento de entidades
@@ -194,7 +282,7 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 
 ---
 
-## 8. Loop de Controle de Desenvolvimento
+## 9. Loop de Controle de Desenvolvimento
 
 1. **Validação de Requisitos** — mapear entidades, regras, atores
 2. **Revisão de Design** — modelar banco, arquitetura, segurança
