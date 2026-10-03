@@ -261,7 +261,7 @@ Com base na planilha, identificamos entidades que não estavam no modelo inicial
 - [x] Requisitos de LGPD
 
 ### Fase 2 — Modelagem Detalhada
-- [ ] Diagrama Entidade-Relacionamento (DER)
+- [x] Diagrama Entidade-Relacionamento (DER) — `docs/der.md`
 - [ ] Protótipos de telas
 - [ ] Matriz de permissões detalhada
 - [ ] Definição de indicadores (fórmulas e fontes)
