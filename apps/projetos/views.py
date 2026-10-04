@@ -12,27 +12,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 
 from apps.core.models import Perfil
+from apps.core.permissions import (
+    perfil_de as _perfil_de,
+    pode_criar as _pode_criar,
+    pode_gerir as _pode_gerir,
+)
 
 from .forms import ProjetoForm
 from .models import Projeto
-
-
-def _perfil_de(user):
-    """None = superusuário. Usuário autenticado SEM perfil → PermissionDenied.
-
-    Isso impede que usuários sem Perfil recebam acesso por engano.
-    """
-    if user.is_superuser:
-        return None
-    try:
-        return user.perfil
-    except Perfil.DoesNotExist:
-        raise PermissionDenied('Seu usuário não possui perfil de acesso. Procure a DIP.')
-
-
-def _pode_gerir(perfil) -> bool:
-    """Técnico, diretor e pro-reitor gerenciam todos os processos."""
-    return perfil is None or perfil.pelo_menos(Perfil.PERFIL_TECNICO)
 
 
 def _pode_editar(user, projeto) -> bool:
@@ -43,14 +30,6 @@ def _pode_editar(user, projeto) -> bool:
     if perfil and perfil.pessoa and projeto.coordenador_id == perfil.pessoa.id:
         return True
     return False
-
-
-def _pode_criar(user) -> bool:
-    """Docente (qualquer técnico+) pode criar projetos."""
-    perfil = _perfil_de(user)
-    if _pode_gerir(perfil):
-        return True
-    return perfil is not None and perfil.perfil == Perfil.PERFIL_DOCENTE
 
 
 def _visiveis_para(user):

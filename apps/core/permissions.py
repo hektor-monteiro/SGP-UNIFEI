@@ -27,6 +27,33 @@ def _perfil_do_usuario(user):
         return None
 
 
+def perfil_de(user):
+    """Retorna o Perfil do usuário para as views decidirem acesso.
+
+    None = superusuário (acesso total). Usuário autenticado SEM perfil
+    recebe PermissionDenied — assim não ganha acesso por engano.
+    """
+    if user.is_superuser:
+        return None
+    try:
+        return user.perfil
+    except Perfil.DoesNotExist:
+        raise PermissionDenied('Seu usuário não possui perfil de acesso. Procure a DIP.')
+
+
+def pode_gerir(perfil) -> bool:
+    """Superusuário (perfil None), técnico, diretor e pro-reitor gerenciam todos os processos."""
+    return perfil is None or perfil.pelo_menos(Perfil.PERFIL_TECNICO)
+
+
+def pode_criar(user) -> bool:
+    """Docente ou técnico+ pode criar registros (aluno não cria)."""
+    perfil = perfil_de(user)
+    if pode_gerir(perfil):
+        return True
+    return perfil is not None and perfil.perfil == Perfil.PERFIL_DOCENTE
+
+
 def perfil_required(*perfis):
     """Exige que o usuário autenticado possua um dos perfis informados.
 
