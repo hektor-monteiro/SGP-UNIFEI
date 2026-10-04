@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Bolsa de {{ bolsa.aluno.nome }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h2 style="margin-bottom:5px;">{{ bolsa.aluno.nome }}</h2>
+            <p style="font-size:1.05rem;">{{ bolsa.modalidade }} — Projeto
+                <a href="{% url 'projeto_detalhe' bolsa.projeto.pk %}" style="color:#003366;">{{ bolsa.projeto.codigo }}</a>
+            </p>
+        </div>
+        <div style="text-align:right;">
+            <span class="badge">{{ bolsa.get_status_display }}</span>
+            {% if pode_editar %}
+                <p style="margin-top:10px;"><a href="{% url 'bolsa_editar' bolsa.pk %}" class="btn">Editar</a></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Informações</h2>
+    <table>
+        <tr><th style="width:220px;">Aluno</th><td>{{ bolsa.aluno.nome }}</td></tr>
+        <tr><th>Matrícula</th><td>{{ bolsa.aluno.matricula|default:"—" }}</td></tr>
+        <tr><th>Modalidade</th><td>{{ bolsa.modalidade }}</td></tr>
+        <tr><th>Projeto</th><td><a href="{% url 'projeto_detalhe' bolsa.projeto.pk %}" style="color:#003366;">{{ bolsa.projeto.codigo }}</a> — {{ bolsa.projeto.titulo }}</td></tr>
+        <tr><th>Fomentador</th><td>{{ bolsa.fomentador|default:"—" }}</td></tr>
+        <tr><th>Início</th><td>{{ bolsa.data_inicio|date:"d/m/Y" }}</td></tr>
+        <tr><th>Término</th><td>{{ bolsa.data_fim|date:"d/m/Y" }}</td></tr>
+        <tr><th>Valor mensal</th><td>{% if bolsa.valor_mensal %}R$ {{ bolsa.valor_mensal }}{% else %}—{% endif %}</td></tr>
+        <tr><th>Status</th><td><span class="badge">{{ bolsa.get_status_display }}</span></td></tr>
+    </table>
+</div>
+
+<p><a href="{% url 'bolsas_lista' %}" style="color:#003366;">← Voltar à lista</a></p>
+{% endblock %}
