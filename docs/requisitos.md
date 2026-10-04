@@ -267,18 +267,23 @@ Com base na planilha, identificamos entidades que não estavam no modelo inicial
 - [ ] Definição de indicadores (fórmulas e fontes)
 
 ### Fase 3 — Setup do Projeto
-- [ ] Inicializar repositório git
-- [ ] Configurar ambiente Docker
-- [ ] Criar projeto Django + app inicial
+- [x] Inicializar repositório git
+- [x] Configurar ambiente Docker
+- [x] Criar projeto Django + app inicial
 - [ ] Configurar CI (GitHub Actions ou GitLab CI)
 
 ### Fase 4 — Desenvolvimento Incremental
-- [ ] Módulo de Editais
-- [ ] Módulo de Projetos
-- [ ] Módulo de Bolsas
-- [ ] Módulo de Equipes
-- [ ] Módulo de Comprovantes
-- [ ] Relatórios e Indicadores
+- [x] Autenticação e permissões (§2)
+- [x] Módulo de Projetos
+- [x] Módulo de Equipes
+- [x] Módulo de Bolsas
+- [x] Planos de trabalho
+- [x] Módulo de Editais
+- [x] Avaliação de propostas
+- [x] Relatórios do aluno
+- [x] Módulo de Comprovantes
+- [x] Relatórios e Indicadores
+- [x] Conformidade LGPD (§6)
 
 ---
 
