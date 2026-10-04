@@ -182,6 +182,11 @@ class PainelDocenteTests(TestCase):
         self.assertContains(response, 'Meus projetos')
         self.assertContains(response, self.projeto.codigo)
         self.assertNotContains(response, 'Você ainda não possui projetos')
+        # O código deve ser link para a página do projeto
+        self.assertContains(
+            response,
+            reverse('projeto_detalhe', kwargs={'pk': self.projeto.pk}),
+        )
 
 
 class EdicaoValoresTests(TestCase):

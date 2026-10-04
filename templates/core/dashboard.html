@@ -34,7 +34,7 @@
             <tr><th>Código</th><th>Título</th><th>Status</th></tr>
             {% for projeto in meus_projetos %}
             <tr>
-                <td>{{ projeto.codigo }}</td>
+                <td><a href="{% url 'projeto_detalhe' projeto.pk %}" style="color:#003366; font-weight:bold;">{{ projeto.codigo }}</a></td>
                 <td>{{ projeto.titulo }}</td>
                 <td><span class="badge">{{ projeto.get_status_display }}</span></td>
             </tr>
