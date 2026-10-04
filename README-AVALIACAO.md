@@ -64,11 +64,17 @@ Exemplo: `APP_PORT=8100 ./instalar.sh`
 Marque o que foi testado e anote o que falhar:
 
 - [ ] **Login/logout** com `aluno1` e `docente1`; painel conforme o perfil
-- [ ] **Projetos**: lista com filtros, detalhe, criação/edição (só técnico+);
-      aluno só enxerga projetos dos quais participa ou tem bolsa
+- [ ] **Projetos**: lista com filtros, detalhe, criação (docente/técnico+);
+      edição pelo coordenador ou técnico+; aluno só enxerga projetos dos
+      quais participa ou tem bolsa
+- [ ] **Equipes** (no detalhe do projeto): técnico+ ou coordenador adiciona,
+      edita, encerra e exclui membros; aluno não vê os botões
 - [ ] **Bolsas**: aluno vê apenas a própria; regra de "1 bolsa ativa" ao editar
 - [ ] **Planos de trabalho**: aluno cria/edita conforme o fluxo de status;
       docente vê os planos pelo painel e pelo projeto
+- [ ] **Relatórios do aluno**: criação/edição conforme status, submissão,
+      nota do orientador/técnico com aprovação automática pela nota mínima,
+      apenas um relatório final por bolsa
 - [ ] **Editais**: técnico cria (nascendo *rascunho*), só diretor/publica;
       ações do fluxo conforme perfil (iniciar/encerrar/cancelar)
 - [ ] **Propostas**: aluno/docente submetem a edital aberto; técnico vê todas,
@@ -78,6 +84,13 @@ Marque o que foi testado e anote o que falhar:
 - [ ] **Avaliação**: painel do `docente1` mostra "Propostas a avaliar" com link;
       notas 0–10 por critério + parecer; nota final = média ponderada;
       aprovação automática pela nota mínima do edital
+- [ ] **Comprovantes**: emissão (bolsa/participação/avaliação) com elegibilidade;
+      lista conforme visibilidade; verificação pública por código em
+      `/comprovantes/verificar/`; página de detalhe imprimível (Ctrl+P)
+- [ ] **Indicadores** (`tecnico1`): painel §5.1/§5.2 e botão **Baixar CSV**
+      (aluno/docente recebem 403)
+- [ ] **LGPD**: link no painel → `/lgpd/`; registrar consentimento; baixar
+      "meus dados" (JSON); `/lgpd/auditoria/` com filtros só para técnico+
 - [ ] **Permissões**: usuários sem perfil ou de nível inferior recebem **403**
 - [ ] **Responsividade** básica (tela de notebook/celular) e erros no console
 
