@@ -37,16 +37,45 @@
 </div>
 
 <div class="card">
-    <h2>Equipe ({{ membros|length }})</h2>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2>Equipe ({{ membros|length }})</h2>
+        {% if pode_editar %}
+        <a href="{% url 'membro_novo' projeto.pk %}" class="btn">Adicionar membro</a>
+        {% endif %}
+    </div>
     {% if membros %}
     <table>
-        <tr><th>Nome</th><th>Função</th><th>Carga horária</th><th>Entrada</th></tr>
+        <tr>
+            <th>Nome</th><th>Função</th><th>Carga horária</th><th>Entrada</th><th>Saída</th><th>Situação</th>
+            {% if pode_editar %}<th>Ações</th>{% endif %}
+        </tr>
         {% for membro in membros %}
         <tr>
             <td>{{ membro.pessoa.nome }}</td>
             <td><span class="badge">{{ membro.get_funcao_display }}</span></td>
             <td>{% if membro.carga_horaria %}{{ membro.carga_horaria }}h{% else %}—{% endif %}</td>
             <td>{{ membro.data_entrada|date:"d/m/Y" }}</td>
+            <td>{{ membro.data_saida|date:"d/m/Y"|default:"—" }}</td>
+            <td>{% if membro.ativo %}<span class="badge">Ativo</span>{% else %}<span class="badge">Inativo</span>{% endif %}</td>
+            {% if pode_editar %}
+            <td style="white-space:nowrap; font-size:0.9em;">
+                <a href="{% url 'membro_editar' membro.pk %}" style="color:#003366;">Editar</a>
+                {% if membro.ativo %}
+                <form method="post" action="{% url 'membro_encerrar' membro.pk %}"
+                      style="display:inline; margin-left:8px;"
+                      onsubmit="return confirm('Encerrar o vínculo de {{ membro.pessoa.nome|escapejs }} (data de saída = hoje)?');">
+                    {% csrf_token %}
+                    <button type="submit" style="background:none; border:none; color:#003366; cursor:pointer; font-size:inherit; font-family:inherit; padding:0; text-decoration:underline;">Encerrar</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{% url 'membro_excluir' membro.pk %}"
+                      style="display:inline; margin-left:8px;"
+                      onsubmit="return confirm('Remover {{ membro.pessoa.nome|escapejs }} da equipe? Esta ação não pode ser desfeita.');">
+                    {% csrf_token %}
+                    <button type="submit" style="background:none; border:none; color:#b71c1c; cursor:pointer; font-size:inherit; font-family:inherit; padding:0; text-decoration:underline;">Excluir</button>
+                </form>
+            </td>
+            {% endif %}
         </tr>
         {% endfor %}
     </table>
