@@ -13,6 +13,7 @@ Pacote para **avaliação e análise de problemas** do Sistema de Gestão de Pes
 - **Docker** instalado — [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac) ou Docker Engine + Compose v2 (Linux)
 - Aproximadamente **1,5 GB** de espaço em disco (imagens + banco)
 - Porta **8000** livre (ou defina outra, ver item 4)
+- Windows em arquitetura **ARM**: a imagem roda em emulação (mais lenta)
 
 ## 2. Instalação
 
@@ -58,6 +59,12 @@ SEED_DEMO=0            # sem dados de demonstração
 ```
 
 Exemplo: `APP_PORT=8100 ./instalar.sh`
+
+No Windows (prompt de comando), antes de rodar o `instalar.bat`:
+
+```bat
+set APP_PORT=8100
+```
 
 ## 5. Checklist de avaliação
 

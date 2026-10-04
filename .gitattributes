@@ -1,0 +1,4 @@
+# Fim de linha por tipo de arquivo — crítico para o instalador Windows:
+# o cmd.exe exige CRLF em .bat (senão quebra labels/goto); o bash exige LF.
+*.bat text eol=crlf
+*.sh text eol=lf
