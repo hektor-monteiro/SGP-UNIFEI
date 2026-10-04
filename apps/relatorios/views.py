@@ -16,6 +16,8 @@ Relatórios — regras de acesso:
 - Avaliação: orientador (coordenador do projeto da bolsa) ou técnico+;
   nota 0–10 + observações; aprovação automática pela nota mínima.
 """
+import csv
+import io
 from decimal import Decimal
 
 from django.contrib import messages
@@ -23,6 +25,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncYear
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
@@ -531,14 +534,8 @@ def _barras(itens):
     return itens
 
 
-@never_cache
-@perfil_required(Perfil.PERFIL_TECNICO, Perfil.PERFIL_DIRETOR, Perfil.PERFIL_PROREITOR)
-def indicadores(request):
-    """Painel de indicadores governamentais e de efetividade (§5).
-
-    Indicadores sem fonte de dados no modelo atual ficam marcados com TODO
-    na tela, em vez de exibir estimativas incorretas.
-    """
+def _dados_indicadores() -> dict:
+    """Agregações dos indicadores §5 — usadas no painel HTML e na exportação CSV."""
     # --- §5.1 Governamentais e de agências de fomento ---
     bolsas_modalidade = list(
         Bolsa.objects.values('modalidade__sigla')
@@ -658,4 +655,157 @@ def indicadores(request):
         'alunos_com_bolsa': alunos_com_bolsa,
         'alunos_renovaram': alunos_renovaram,
     }
-    return render(request, 'relatorios/indicadores.html', contexto)
+    return contexto
+
+
+@never_cache
+@perfil_required(Perfil.PERFIL_TECNICO, Perfil.PERFIL_DIRETOR, Perfil.PERFIL_PROREITOR)
+def indicadores(request):
+    """Painel de indicadores governamentais e de efetividade (§5).
+
+    Indicadores sem fonte de dados no modelo atual ficam marcados com TODO
+    na tela, em vez de exibir estimativas incorretas.
+    """
+    return render(request, 'relatorios/indicadores.html', _dados_indicadores())
+
+
+def _num_csv(valor):
+    """Número em formato pt-BR (vírgula decimal) para o CSV."""
+    if isinstance(valor, Decimal):
+        return format(valor, 'f').replace('.', ',')
+    if isinstance(valor, float):
+        return str(valor).replace('.', ',')
+    return valor
+
+
+def _escrever_indicadores_csv(writer, dados, usuario):
+    """Escreve as seções dos indicadores (§5) em writer CSV com delimitador `;`."""
+    writer.writerow(['SGP-UNIFEI — Indicadores de pesquisa'])
+    writer.writerow(['Emitido em', timezone.localtime().strftime('%d/%m/%Y %H:%M')])
+    writer.writerow(['Emitido por', usuario])
+    writer.writerow([])
+
+    # --- Visão geral (KPIs do topo) ---
+    writer.writerow(['Visão geral'])
+    writer.writerow(['Indicador', 'Valor'])
+    writer.writerow(['Projetos', dados['total_projetos']])
+    writer.writerow(['Bolsas ativas', dados['total_bolsas_ativas']])
+    writer.writerow(['Editais', dados['total_editais']])
+    writer.writerow([
+        'Taxa de conclusão de projetos (%)',
+        _num_csv(dados['taxa_conclusao']),
+    ])
+    writer.writerow([])
+
+    # --- §5.1 ---
+    writer.writerow(['5.1 Governamentais e de agências de fomento'])
+    writer.writerow(['Bolsas por modalidade'])
+    writer.writerow(['Modalidade', 'Total', 'Ativas'])
+    for m in dados['bolsas_modalidade']:
+        writer.writerow([
+            m['modalidade__sigla'] or 'Não informado', m['total'], m['ativas'],
+        ])
+    writer.writerow([])
+
+    writer.writerow(['Bolsas por fomentador'])
+    writer.writerow(['Fomentador', 'Total'])
+    for f in dados['bolsas_fomentador']:
+        writer.writerow([f['fomentador__sigla'] or 'Não informado', f['total']])
+    writer.writerow([])
+
+    writer.writerow(['Projetos e recursos'])
+    writer.writerow(['Indicador', 'Valor'])
+    writer.writerow([
+        'Projetos concluídos',
+        f"{dados['projetos_concluidos']}/{dados['total_projetos']}",
+    ])
+    writer.writerow(['Alunos que concluíram a bolsa', dados['alunos_concluiram']])
+    writer.writerow([
+        'Membros externos (ativos/total)',
+        f"{dados['externos_ativos']}/{dados['externos_total']}",
+    ])
+    writer.writerow([
+        'Recursos internos vinculados (R$)',
+        _num_csv(dados['recursos_internos']),
+    ])
+    writer.writerow([
+        'Recursos externos vinculados (R$)',
+        _num_csv(dados['recursos_externos']),
+    ])
+    writer.writerow([])
+
+    # --- §5.2 ---
+    writer.writerow(['5.2 Indicadores de efetividade'])
+    writer.writerow(['Evolução — bolsas iniciadas por ano'])
+    writer.writerow(['Ano', 'Bolsas'])
+    for b in dados['evolucao_bolsas']:
+        writer.writerow([b['ano'].year, b['total']])
+    writer.writerow([])
+
+    writer.writerow(['Evolução — projetos iniciados por ano'])
+    writer.writerow(['Ano', 'Projetos'])
+    for p in dados['evolucao_projetos']:
+        writer.writerow([p['ano'].year, p['total']])
+    writer.writerow([])
+
+    writer.writerow(['Taxa de sucesso em editais'])
+    writer.writerow(['Indicador', 'Valor'])
+    writer.writerow([
+        'Propostas aprovadas',
+        f"{dados['propostas_aprovadas']}/{dados['total_propostas']}",
+    ])
+    writer.writerow(['Taxa geral (%)', _num_csv(dados['taxa_sucesso_editais'])])
+    writer.writerow([])
+
+    writer.writerow(['Sucesso por edital'])
+    writer.writerow(['Edital', 'Título', 'Propostas', 'Aprovadas', 'Taxa (%)'])
+    for e in dados['editais_taxas']:
+        writer.writerow([
+            e['codigo'], e['titulo'], e['total'], e['aprovadas'],
+            _num_csv(e['taxa']),
+        ])
+    writer.writerow([])
+
+    writer.writerow(['Orientados por docente (bolsas ativas)'])
+    writer.writerow(['Docente', 'Orientandos'])
+    for o in dados['orientandos']:
+        writer.writerow([
+            o['projeto__coordenador__nome'] or 'Não informado',
+            o['orientandos'],
+        ])
+    writer.writerow([])
+
+    writer.writerow(['Efetividade'])
+    writer.writerow(['Indicador', 'Valor'])
+    tempo = dados['tempo_medio_dias']
+    writer.writerow([
+        'Tempo médio de conclusão (dias)',
+        tempo if tempo is not None else 'Sem dados',
+    ])
+    writer.writerow([
+        'Alunos com 2 ou mais bolsas (%)',
+        _num_csv(dados['taxa_renovacao']),
+        f"{dados['alunos_renovaram']}/{dados['alunos_com_bolsa']}",
+    ])
+
+
+@never_cache
+@perfil_required(Perfil.PERFIL_TECNICO, Perfil.PERFIL_DIRETOR, Perfil.PERFIL_PROREITOR)
+def indicadores_csv(request):
+    """Exportação CSV dos indicadores (§5) para prestação de contas.
+
+    Delimitador `;` e vírgula decimal ( convenção Excel pt-BR), UTF-8 com BOM
+    para os acentos abrirem corretamente.
+    """
+    dados = _dados_indicadores()
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=';', lineterminator='\r\n')
+    _escrever_indicadores_csv(writer, dados, request.user.get_username())
+
+    resposta = HttpResponse(content_type='text/csv; charset=utf-8')
+    resposta['Content-Disposition'] = (
+        f'attachment; filename="indicadores-{timezone.localdate():%Y%m%d}.csv"'
+    )
+    resposta.write('\ufeff' + buffer.getvalue())
+    return resposta
