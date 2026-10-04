@@ -25,13 +25,13 @@ class Command(BaseCommand):
         modalidades = self.criar_modalidades()
         self.stdout.write(f'  ✓ {len(modalidades)} modalidades criadas')
 
-        alunos, docentes = self.criar_pessoas(instituicoes)
-        self.stdout.write(f'  ✓ {len(alunos)} alunos e {len(docentes)} docentes criados')
+        alunos, docentes, externos = self.criar_pessoas(instituicoes)
+        self.stdout.write(f'  ✓ {len(alunos)} alunos, {len(docentes)} docentes e {len(externos)} externos criados')
 
         projetos = self.criar_projetos(docentes, instituicoes, fomentadores)
         self.stdout.write(f'  ✓ {len(projetos)} projetos criados')
 
-        self.criar_equipes(projetos, alunos, docentes)
+        self.criar_equipes(projetos, alunos, docentes, externos)
         self.stdout.write(f'  ✓ Equipes criadas')
 
         bolsas = self.criar_bolsas(projetos, alunos, modalidades, fomentadores)
@@ -186,7 +186,22 @@ class Command(BaseCommand):
                 }
             )
             docentes.append(docente)
-        return alunos, docentes
+        nomes_externos = [
+            'Carlos Roberto Mendes', 'Patrícia Alves de Souza',
+        ]
+        externos = []
+        for nome in nomes_externos:
+            email = f'{nome.lower().replace(" ", ".")}@parceiro.com.br'
+            externo, _ = Pessoa.objects.get_or_create(
+                email=email,
+                defaults={
+                    'nome': nome,
+                    'tipo': 'externo',
+                    'instituicao': random.choice(instituicoes),
+                }
+            )
+            externos.append(externo)
+        return alunos, docentes, externos
 
     def criar_projetos(self, docentes, instituicoes, fomentadores):
         titulos = [
@@ -204,24 +219,40 @@ class Command(BaseCommand):
         projetos = []
         for i, titulo in enumerate(titulos):
             codigo = f'PVDI{random.randint(100, 999)}-2024'
+            # Sempre há projetos concluídos (variedade p/ indicadores §5.1)
+            status = 'concluido' if i in (3, 8) else random.choice(
+                ['vigente', 'vigente', 'expirado'],
+            )
+            if status == 'concluido':
+                # Projeto concluído termina no passado; início anterior ao término
+                data_termino = datetime.now() - timedelta(days=random.randint(15, 180))
+                data_inicio = data_termino - timedelta(days=random.randint(120, 720))
+            else:
+                data_inicio = datetime.now() - timedelta(days=random.randint(10, 180))
+                data_termino = datetime.now() + timedelta(days=random.randint(30, 365))
             projeto, created = Projeto.objects.get_or_create(
                 codigo=codigo,
                 defaults={
                     'titulo': titulo,
-                    'data_registro': datetime.now() - timedelta(days=random.randint(30, 365)),
-                    'data_inicio': datetime.now() - timedelta(days=random.randint(10, 180)),
-                    'data_termino': datetime.now() + timedelta(days=random.randint(30, 365)),
-                    'status': random.choice(['vigente', 'vigente', 'vigente', 'expirado']),
+                    'data_registro': data_inicio - timedelta(days=random.randint(5, 60)),
+                    'data_inicio': data_inicio,
+                    'data_termino': data_termino,
+                    'status': status,
                     'coordenador': docentes[i % len(docentes)],
                     'instituicao': random.choice(instituicoes),
                     'fomentador': random.choice(fomentadores) if random.random() > 0.3 else None,
+                    # Recursos vinculados alimentam a execução orçamentária (§5.1)
+                    'recursos_internos': round(random.uniform(5000, 80000), 2),
+                    'recursos_externos': (
+                        round(random.uniform(10000, 150000), 2) if random.random() > 0.4 else None
+                    ),
                 }
             )
             projetos.append(projeto)
         return projetos
 
-    def criar_equipes(self, projetos, alunos, docentes):
-        for projeto in projetos:
+    def criar_equipes(self, projetos, alunos, docentes, externos):
+        for i, projeto in enumerate(projetos):
             MembroEquipe.objects.get_or_create(
                 projeto=projeto,
                 pessoa=projeto.coordenador,
@@ -254,6 +285,17 @@ class Command(BaseCommand):
                             'data_entrada': projeto.data_inicio,
                         }
                     )
+            # Colaboradores externos sempre em parte dos projetos (§5.1)
+            if externos and (i % 3 == 0 or random.random() > 0.7):
+                MembroEquipe.objects.get_or_create(
+                    projeto=projeto,
+                    pessoa=random.choice(externos),
+                    funcao='externo',
+                    defaults={
+                        'carga_horaria': random.choice([4, 8]),
+                        'data_entrada': projeto.data_inicio,
+                    },
+                )
 
     def criar_bolsas(self, projetos, alunos, modalidades, fomentadores):
         bolsas = []
@@ -263,7 +305,12 @@ class Command(BaseCommand):
                 disponiveis = [a for a in alunos if a.id not in alunos_usados]
                 if not disponiveis:
                     break
-                aluno = random.choice(disponiveis)
+                # Primeira bolsa sempre do aluno demo (aluno1 = alunos[0]),
+                # para o painel inicial não nascer vazio em instalação nova
+                aluno = (
+                    alunos[0] if not alunos_usados and alunos
+                    else random.choice(disponiveis)
+                )
                 alunos_usados.add(aluno.id)
                 bolsa, created = Bolsa.objects.get_or_create(
                     aluno=aluno,
@@ -273,12 +320,32 @@ class Command(BaseCommand):
                         'fomentador': random.choice(fomentadores),
                         'data_inicio': projeto.data_inicio,
                         'data_fim': projeto.data_termino or (datetime.now() + timedelta(days=365)),
-                        'status': 'ativa',
+                        # Bolsa de projeto concluído já se encerrou (§5.1 e §5.2)
+                        'status': 'encerrada' if projeto.status == 'concluido' else 'ativa',
                         'valor_mensal': random.choice([400.00, 500.00, 600.00, 700.00]),
                     }
                 )
                 if created:
                     bolsas.append(bolsa)
+        # Segunda bolsa já encerrada para alguns alunos: alimenta o indicador
+        # de retenção/renovação de bolsistas (§5.2)
+        for aluno_id in list(alunos_usados)[:5]:
+            aluno = next(a for a in alunos if a.id == aluno_id)
+            projeto = random.choice(projetos)
+            bolsa, created = Bolsa.objects.get_or_create(
+                aluno=aluno,
+                projeto=projeto,
+                defaults={
+                    'modalidade': random.choice(modalidades),
+                    'fomentador': random.choice(fomentadores),
+                    'data_inicio': projeto.data_inicio - timedelta(days=365),
+                    'data_fim': projeto.data_inicio,
+                    'status': 'encerrada',
+                    'valor_mensal': random.choice([400.00, 500.00, 600.00, 700.00]),
+                },
+            )
+            if created:
+                bolsas.append(bolsa)
         return bolsas
 
     def criar_planos_trabalho(self, bolsas, alunos):
