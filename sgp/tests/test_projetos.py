@@ -79,6 +79,24 @@ class ProjetoAcessoTests(TestCase):
         response = self.client.get(reverse('projeto_detalhe', kwargs={'pk': self.projeto.pk}))
         self.assertEqual(response.status_code, 200)
 
+    def test_aluno_com_bolsa_ve_projeto_mesmo_sem_ser_membro(self):
+        """Aluno com bolsa no projeto (sem ser membro) vê lista e detalhe."""
+        from apps.bolsas.models import Bolsa, ModalidadeBolsa
+        modalidade, _ = ModalidadeBolsa.objects.get_or_create(
+            sigla='PIBIC', defaults={'nome': 'Iniciação Científica'},
+        )
+        Bolsa.objects.create(
+            projeto=self.projeto, aluno=self.aluno_pessoa, modalidade=modalidade,
+            data_inicio=date(2026, 3, 1), data_fim=date(2026, 11, 30),
+        )
+        self.client.login(username='alu', password='x')
+        # Lista mostra o projeto
+        response = self.client.get(reverse('projetos_lista'))
+        self.assertContains(response, 'PVDI1-2026')
+        # Detalhe acessível
+        response = self.client.get(reverse('projeto_detalhe', kwargs={'pk': self.projeto.pk}))
+        self.assertEqual(response.status_code, 200)
+
     def test_aluno_nao_pode_criar(self):
         self.client.login(username='alu', password='x')
         response = self.client.get(reverse('projeto_novo'))

@@ -245,6 +245,11 @@ class IntegracoesTests(TestCase):
         )
         _criar_usuario('alu_int', Perfil.PERFIL_ALUNO, aluno)
         _criar_usuario('doc_int', Perfil.PERFIL_DOCENTE, docente)
+        # Docente NÃO coordenador (qualquer docente vê os planos)
+        docente_visitante = Pessoa.objects.create(
+            nome='Docente Visitante', email='visit@unifei.edu.br', tipo='docente',
+        )
+        _criar_usuario('doc_vis', Perfil.PERFIL_DOCENTE, docente_visitante)
 
     def test_bolsa_detalhe_mostra_plano(self):
         """A página da bolsa exibe o plano de trabalho vinculado."""
@@ -259,3 +264,33 @@ class IntegracoesTests(TestCase):
         self.assertContains(response, 'Seus planos de trabalho')
         self.assertContains(response, 'Plano integrado')
         self.assertContains(response, reverse('plano_detalhe', kwargs={'pk': self.plano.pk}))
+
+    def test_projeto_linka_planos_das_bolsas_para_docente(self):
+        """Docente+ vê a coluna Plano de trabalho nas bolsas do projeto."""
+        self.client.login(username='doc_int', password='x')
+        response = self.client.get(
+            reverse('projeto_detalhe', kwargs={'pk': self.bolsa.projeto.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<th>Plano de trabalho</th>')
+        self.assertContains(response, reverse('plano_detalhe', kwargs={'pk': self.plano.pk}))
+
+    def test_docente_nao_coordenador_tambem_ve_links_dos_planos(self):
+        """Docente não coordenador vê os planos ao visualizar o projeto."""
+        self.client.login(username='doc_vis', password='x')
+        response = self.client.get(
+            reverse('projeto_detalhe', kwargs={'pk': self.bolsa.projeto.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<th>Plano de trabalho</th>')
+        self.assertContains(response, reverse('plano_detalhe', kwargs={'pk': self.plano.pk}))
+
+    def test_aluno_ve_projeto_mas_sem_links_de_plano(self):
+        """Aluno vê o projeto (tem bolsa) mas sem links dos planos de terceiros."""
+        self.client.login(username='alu_int', password='x')
+        response = self.client.get(
+            reverse('projeto_detalhe', kwargs={'pk': self.bolsa.projeto.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, '<th>Plano de trabalho</th>')
+        self.assertNotContains(response, reverse('plano_detalhe', kwargs={'pk': self.plano.pk}))

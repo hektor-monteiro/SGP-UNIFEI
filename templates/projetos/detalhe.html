@@ -59,7 +59,7 @@
     <h2>Bolsas ({{ bolsas|length }})</h2>
     {% if bolsas %}
     <table>
-        <tr><th>Aluno</th><th>Modalidade</th><th>Fomentador</th><th>Período</th><th>Status</th></tr>
+        <tr><th>Aluno</th><th>Modalidade</th><th>Fomentador</th><th>Período</th><th>Status</th>{% if mostrar_planos %}<th>Plano de trabalho</th>{% endif %}</tr>
         {% for bolsa in bolsas %}
         <tr>
             <td>{{ bolsa.aluno.nome }}</td>
@@ -67,6 +67,14 @@
             <td>{{ bolsa.fomentador.sigla|default:"—" }}</td>
             <td>{{ bolsa.data_inicio|date:"d/m/Y" }} — {{ bolsa.data_fim|date:"d/m/Y" }}</td>
             <td><span class="badge">{{ bolsa.get_status_display }}</span></td>
+            {% if mostrar_planos %}
+            <td>
+                {% if bolsa.plano_trabalho %}
+                    <a href="{% url 'plano_detalhe' bolsa.plano_trabalho.pk %}" style="color:#003366;">{{ bolsa.plano_trabalho.titulo|truncatechars:40 }}</a>
+                    <span class="badge">{{ bolsa.plano_trabalho.get_status_display }}</span>
+                {% else %}—{% endif %}
+            </td>
+            {% endif %}
         </tr>
         {% endfor %}
     </table>

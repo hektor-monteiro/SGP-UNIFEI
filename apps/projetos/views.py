@@ -8,6 +8,7 @@ Regras de acesso:
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 
@@ -33,14 +34,16 @@ def _pode_editar(user, projeto) -> bool:
 
 
 def _visiveis_para(user):
-    """Projetos visíveis: aluno vê apenas os que participa."""
+    """Projetos visíveis: aluno vê os que é membro OU em que tem bolsa."""
     projetos = Projeto.objects.select_related(
         'coordenador', 'instituicao', 'fomentador',
     )
     perfil = _perfil_de(user)
     if perfil and perfil.perfil == Perfil.PERFIL_ALUNO:
         if perfil.pessoa:
-            return projetos.filter(membros__pessoa=perfil.pessoa).distinct()
+            return projetos.filter(
+                Q(membros__pessoa=perfil.pessoa) | Q(bolsas__aluno=perfil.pessoa)
+            ).distinct()
         return projetos.none()
     return projetos
 
@@ -96,16 +99,27 @@ def detalhe(request, pk):
     )
 
     perfil = _perfil_de(request.user)
-    # Aluno só vê projetos dos quais participa
+    # Aluno só vê projetos dos quais participa: como membro ou com bolsa nele
     if perfil and perfil.perfil == Perfil.PERFIL_ALUNO:
-        if not projeto.membros.filter(pessoa=perfil.pessoa).exists():
+        if not perfil.pessoa:
+            raise PermissionDenied
+        participa = (
+            projeto.membros.filter(pessoa=perfil.pessoa).exists()
+            or projeto.bolsas.filter(aluno=perfil.pessoa).exists()
+        )
+        if not participa:
             raise PermissionDenied
 
     contexto = {
         'projeto': projeto,
         'membros': projeto.membros.select_related('pessoa').order_by('funcao'),
-        'bolsas': projeto.bolsas.select_related('aluno', 'modalidade', 'fomentador').all(),
+        'bolsas': projeto.bolsas.select_related(
+            'aluno', 'modalidade', 'fomentador', 'plano_trabalho',
+        ).all(),
         'pode_editar': _pode_editar(request.user, projeto),
+        # Docente (qualquer) e perfis técnicos+ veem os planos das bolsas;
+        # aluno não vê planos de terceiros
+        'mostrar_planos': perfil is None or perfil.perfil != Perfil.PERFIL_ALUNO,
     }
     return render(request, 'projetos/detalhe.html', contexto)
 
