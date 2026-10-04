@@ -116,7 +116,23 @@
         <p style="margin-top:15px;">Você ainda não possui relatórios. <a href="{% url 'relatorio_novo' %}" style="color:#003366;">Criar relatório</a></p>
     {% endif %}
 
-    <p style="color:#666; font-size:0.9rem; margin-top:10px;">Aqui serão exibidos comprovantes.</p>
+    {% if meus_comprovantes %}
+        <p style="margin-top:15px;">Seus comprovantes:</p>
+        <table>
+            <tr><th>Tipo</th><th>Beneficiário</th><th>Emitido em</th><th>Ação</th></tr>
+            {% for comp in meus_comprovantes %}
+            <tr>
+                <td><span class="badge">{{ comp.get_tipo_display }}</span></td>
+                <td>{{ comp.pessoa.nome }}</td>
+                <td>{{ comp.emitido_em|date:"d/m/Y" }}</td>
+                <td><a href="{% url 'comprovante_detalhe' comp.pk %}" style="color:#003366;">Ver / Imprimir</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+        <p style="margin-top:8px;"><a href="{% url 'comprovantes_lista' %}" style="color:#003366;">Ver todos os comprovantes →</a></p>
+    {% else %}
+        <p style="margin-top:10px;">Você ainda não possui comprovantes. <a href="{% url 'comprovantes_lista' %}" style="color:#003366;">Emitir comprovante</a></p>
+    {% endif %}
 </div>
 {% endif %}
 {% endblock %}

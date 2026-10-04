@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Verificar comprovante{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:750px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Verificação de comprovante</h2>
+        <span class="badge" style="background:#e8f5e9; color:#2e7d32;">Válido</span>
+    </div>
+
+    <p style="color:#666; margin-top:8px;">
+        Comprovante encontrado no sistema da DIP — os dados abaixo conferem com o documento emitido.
+    </p>
+
+    <table>
+        <tr><th style="width:220px;">Código</th><td><code>{{ comprovante.codigo_verificacao }}</code></td></tr>
+        <tr><th>Tipo</th><td>{{ comprovante.get_tipo_display }}</td></tr>
+        <tr><th>Beneficiário</th><td>{{ comprovante.pessoa.nome }}</td></tr>
+        {% if comprovante.projeto %}
+            <tr><th>Projeto</th><td>{{ comprovante.projeto.codigo }} — {{ comprovante.projeto.titulo }}</td></tr>
+        {% endif %}
+        {% if comprovante.bolsa %}
+            <tr><th>Bolsa</th><td>{{ comprovante.bolsa.modalidade.sigla }}</td></tr>
+        {% endif %}
+        {% if comprovante.edital %}
+            <tr><th>Edital</th><td>{{ comprovante.edital.codigo }}</td></tr>
+        {% endif %}
+        <tr><th>Período</th><td>
+            {% if comprovante.data_inicio or comprovante.data_fim %}
+                {{ comprovante.data_inicio|date:"d/m/Y"|default:"—" }} — {{ comprovante.data_fim|date:"d/m/Y"|default:"—" }}
+            {% else %}—{% endif %}
+        </td></tr>
+        <tr><th>Emitido em</th><td>{{ comprovante.emitido_em|date:"d/m/Y H:i" }}</td></tr>
+    </table>
+
+    <p style="color:#666; font-size:0.9rem; margin-top:15px;">
+        Documento gerado eletronicamente pelo SGP-UNIFEI — Diretoria de Pesquisa e Inovação da UNIFEI.
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Comprovantes{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Comprovantes ({{ comprovantes|length }})</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            {% if pode_emitir_bolsa %}
+                <a href="{% url 'comprovante_emitir_bolsa' %}" class="btn">+ Comprovante de bolsa</a>
+            {% endif %}
+            {% if pode_emitir_participacao %}
+                <a href="{% url 'comprovante_emitir_participacao' %}" class="btn">+ Participação</a>
+            {% endif %}
+            {% if pode_emitir_avaliacao %}
+                <a href="{% url 'comprovante_emitir_avaliacao' %}" class="btn">+ Avaliação</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="get" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label style="font-size:0.85rem;">Busca</label>
+            <input type="text" name="q" value="{{ filtros.q }}" placeholder="Beneficiário ou código" style="width:220px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem;">Tipo</label>
+            <select name="tipo" style="padding:9px; border:1px solid #ccc; border-radius:4px;">
+                <option value="">— Todos —</option>
+                {% for valor, rotulo in tipo_choices %}
+                    <option value="{{ valor }}" {% if filtros.tipo == valor %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn">Filtrar</button>
+        {% if filtros.q or filtros.tipo %}
+            <a href="{% url 'comprovantes_lista' %}" style="color:#003366;">Limpar</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    {% if comprovantes %}
+        <table>
+            <tr>
+                <th>Tipo</th>
+                <th>Beneficiário</th>
+                <th>Objeto</th>
+                <th>Período</th>
+                <th>Código</th>
+                <th>Emitido em</th>
+                <th>Ação</th>
+            </tr>
+            {% for comp in comprovantes %}
+            <tr>
+                <td><span class="badge">{{ comp.get_tipo_display }}</span></td>
+                <td>{{ comp.pessoa.nome }}</td>
+                <td>
+                    {% if comp.bolsa %}Bolsa {{ comp.bolsa.modalidade.sigla }}
+                    {% elif comp.projeto %}{{ comp.projeto.codigo }}
+                    {% elif comp.edital %}Edital {{ comp.edital.codigo }}
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    {% if comp.data_inicio or comp.data_fim %}
+                        {{ comp.data_inicio|date:"d/m/Y"|default:"—" }} — {{ comp.data_fim|date:"d/m/Y"|default:"—" }}
+                    {% else %}—{% endif %}
+                </td>
+                <td><code>{{ comp.codigo_verificacao }}</code></td>
+                <td>{{ comp.emitido_em|date:"d/m/Y H:i" }}</td>
+                <td><a href="{% url 'comprovante_detalhe' comp.pk %}" style="color:#003366;">Ver / Imprimir</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Nenhum comprovante encontrado.</p>
+    {% endif %}
+</div>
+{% endblock %}

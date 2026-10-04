@@ -33,7 +33,12 @@ class Comprovante(TimeStampedModel):
 
     def save(self, *args, **kwargs):
         if not self.codigo_verificacao:
-            hash_input = f'{self.pessoa.id}{self.projeto_id or ""}{self.bolsa_id or ""}{self.edital_id or ""}'
+            # id entra no hash: cada emissão gera um código único, mesmo
+            # para o mesmo beneficiário/objeto (evita colisão de unicidade)
+            hash_input = (
+                f'{self.id}{self.pessoa.id}{self.projeto_id or ""}'
+                f'{self.bolsa_id or ""}{self.edital_id or ""}'
+            )
             self.codigo_verificacao = hashlib.sha256(hash_input.encode()).hexdigest()[:16]
         super().save(*args, **kwargs)
 

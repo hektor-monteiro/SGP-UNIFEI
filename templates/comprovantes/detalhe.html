@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Comprovante {{ comprovante.codigo_verificacao }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Versão imprimível: esconde a navegação e as ações ao imprimir */
+    @media print {
+        header, .acoes { display: none !important; }
+        main { padding: 0; }
+        .card { box-shadow: none; border: 1px solid #999; }
+    }
+    .cabecalho-oficial { text-align: center; border-bottom: 2px solid #003366; padding-bottom: 10px; margin-bottom: 15px; }
+    .cabecalho-oficial h3 { margin: 0; letter-spacing: 0.5px; }
+    .codigo-verificacao { font-family: monospace; font-size: 1.15rem; background: #f0f4f8; padding: 6px 10px; border-radius: 4px; }
+</style>
+
+<div class="card">
+    <div class="cabecalho-oficial">
+        <h3>UNIVERSIDADE FEDERAL DE ITAJUBÁ</h3>
+        <p style="margin:5px 0 0;">Diretoria de Pesquisa e Inovação — DIP</p>
+    </div>
+
+    <h2 style="text-align:center; margin-bottom:15px;">Comprovante de {{ comprovante.get_tipo_display }}</h2>
+
+    <table>
+        <tr><th style="width:230px;">Beneficiário</th><td>{{ comprovante.pessoa.nome }}{% if comprovante.pessoa.matricula %} — Matrícula {{ comprovante.pessoa.matricula }}{% endif %}</td></tr>
+        {% if comprovante.projeto %}
+            <tr><th>Projeto</th><td>{{ comprovante.projeto.codigo }} — {{ comprovante.projeto.titulo }} (Coordenador: {{ comprovante.projeto.coordenador.nome|default:"—" }})</td></tr>
+        {% endif %}
+        {% if comprovante.bolsa %}
+            <tr><th>Bolsa</th><td>{{ comprovante.bolsa.modalidade.sigla }} — {{ comprovante.bolsa.modalidade.nome }}</td></tr>
+        {% endif %}
+        {% if comprovante.edital %}
+            <tr><th>Edital</th><td>{{ comprovante.edital.codigo }} — {{ comprovante.edital.titulo }}</td></tr>
+        {% endif %}
+        {% if comprovante.data_inicio or comprovante.data_fim %}
+            <tr><th>Período</th><td>{{ comprovante.data_inicio|date:"d/m/Y"|default:"—" }} — {{ comprovante.data_fim|date:"d/m/Y"|default:"—" }}</td></tr>
+        {% endif %}
+        {% if comprovante.carga_horaria %}
+            <tr><th>Carga horária</th><td>{{ comprovante.carga_horaria }} horas semanais</td></tr>
+        {% endif %}
+        <tr><th>Descrição</th><td>{{ comprovante.descricao|linebreaksbr }}</td></tr>
+        <tr><th>Emitido por</th><td>{{ comprovante.emitido_por.username|default:"—" }}</td></tr>
+        <tr><th>Emitido em</th><td>{{ comprovante.emitido_em|date:"d/m/Y H:i" }}</td></tr>
+    </table>
+
+    <p style="margin-top:18px;">
+        Código de verificação: <span class="codigo-verificacao">{{ comprovante.codigo_verificacao }}</span>
+    </p>
+    <p style="color:#666; font-size:0.9rem;">
+        Valide este documento em
+        <strong>{{ request.scheme }}://{{ request.get_host }}{% url 'comprovante_verificar' comprovante.codigo_verificacao %}</strong>
+    </p>
+
+    <div class="acoes" style="margin-top:20px; display:flex; gap:15px; align-items:center;">
+        <button class="btn" onclick="window.print()">Imprimir</button>
+        <a href="{% url 'comprovantes_lista' %}" style="color:#003366;">← Voltar à lista</a>
+    </div>
+</div>
+{% endblock %}

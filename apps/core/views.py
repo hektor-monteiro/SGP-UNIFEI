@@ -1,9 +1,11 @@
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.shortcuts import render
 from django.views.decorators.cache import never_cache
 
 from apps.projetos.models import Projeto, Pessoa
 from apps.bolsas.models import Bolsa
+from apps.comprovantes.models import Comprovante
 from apps.editais.models import Edital, Avaliacao
 from apps.relatorios.models import PlanoTrabalho, Relatorio
 
@@ -71,7 +73,7 @@ def dashboard(request):
             'mostrar_meus_projetos': True,
         })
     else:
-        # Aluno: vê seus planos e relatórios; comprovantes depois
+        # Aluno: vê seus planos, relatórios e comprovantes
         planos = (
             PlanoTrabalho.objects.filter(aluno=perfil.pessoa).select_related('bolsa__modalidade')
             if perfil and perfil.pessoa else PlanoTrabalho.objects.none()
@@ -80,10 +82,17 @@ def dashboard(request):
             Relatorio.objects.filter(aluno=perfil.pessoa).select_related('bolsa__modalidade')
             if perfil and perfil.pessoa else Relatorio.objects.none()
         )
+        comprovantes = (
+            Comprovante.objects.filter(
+                Q(pessoa=perfil.pessoa) | Q(emitido_por=request.user),
+            ).select_related('bolsa__modalidade', 'projeto')[:5]
+            if perfil and perfil.pessoa else Comprovante.objects.none()
+        )
         contexto.update({
             'mostrar_aluno': True,
             'meus_planos': planos,
             'meus_relatorios': relatorios,
+            'meus_comprovantes': comprovantes,
         })
 
     return render(request, 'core/dashboard.html', contexto)
