@@ -11,4 +11,9 @@ urlpatterns = [
         name='login',
     ),
     path('contas/sair/', auth_views.LogoutView.as_view(), name='logout'),
+    # LGPD (§6)
+    path('lgpd/', views.lgpd_pagina, name='lgpd'),
+    path('lgpd/meus-dados/', views.lgpd_meus_dados, name='lgpd_meus_dados'),
+    path('lgpd/consentimento/', views.lgpd_consentimento, name='lgpd_consentimento'),
+    path('lgpd/auditoria/', views.auditoria, name='auditoria'),
 ]

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Privacidade e LGPD{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Privacidade e proteção de dados (LGPD)</h2>
+    <p style="color:#666;">
+        Esta página reúne seus direitos como titular de dados pessoais,
+        conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018) e o §6
+        dos requisitos do SGP-UNIFEI.
+    </p>
+
+    <h3>Consentimento para coleta de dados</h3>
+    {% if perfil %}
+        {% if perfil.consentimento_lgpd %}
+            <p>
+                ✅ Consentimento registrado em
+                <strong>{{ perfil.data_consentimento|date:"d/m/Y H:i" }}</strong>.
+            </p>
+        {% else %}
+            <p>Você ainda não registrou seu consentimento.</p>
+            <form method="post" action="{% url 'lgpd_consentimento' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn">
+                    Registrar consentimento
+                </button>
+            </form>
+        {% endif %}
+    {% else %}
+        <p>
+            Usuário administrativo (superusuário) não possui perfil de titular —
+            consentimento não se aplica.
+        </p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Seus dados</h3>
+    <p>
+        Você pode baixar uma cópia dos seus dados pessoais armazenados no
+        sistema (direito de acesso e portabilidade).
+    </p>
+    <p>
+        <a class="btn" href="{% url 'lgpd_meus_dados' %}">Baixar meus dados (JSON)</a>
+    </p>
+</div>
+
+<div class="card">
+    <h3>Seus direitos como titular</h3>
+    <ul>
+        <li><strong>Acesso e portabilidade:</strong> baixe seus dados no botão acima.</li>
+        <li>
+            <strong>Correção:</strong> solicite a correção de dados incompletos,
+            inexatos ou desatualizados ao encarregado (DPO) ou à DIP.
+        </li>
+        <li>
+            <strong>Exclusão:</strong> os dados pessoais podem ser anonimizados
+            quando já não forem necessários às finalidades do sistema,
+            preservando os registros de pesquisa e prestação de contas.
+        </li>
+        <li>
+            <strong>Informação sobre compartilhamento:</strong> os dados são
+            usados apenas para gestão de pesquisas, bolsas e relatórios desta
+            direção.
+        </li>
+    </ul>
+    <p class="todo" style="color:#8a6d3b; font-size:0.85rem;">
+        ⚙ TODO: fluxo automatizado de solicitação de correção/exclusão
+        (hoje a solicitação é feita ao encarregado).
+    </p>
+</div>
+
+<div class="card">
+    <h3>Encarregado pelo tratamento de dados (DPO)</h3>
+    <p>
+        Diretoria de Pesquisa e Inovação (DIP) — UNIFEI<br>
+        Contato: <strong>dpo@unifei.edu.br</strong>
+    </p>
+    <p class="todo" style="color:#8a6d3b; font-size:0.85rem;">
+        ⚙ TODO: nomear formalmente o encarregado (art. 41 da LGPD) e
+        publicar o nome e os contatos no site da UNIFEI.
+    </p>
+
+    <h3 style="margin-top:18px;">Política de retenção de dados</h3>
+    <p>
+        Dados de projetos, bolsas e relatórios são mantidos enquanto vigentes
+        e pelos prazos de prestação de contas exigidos pelas agências de
+        fomento; após isso, passam a uso interno estatístico.
+    </p>
+    <p class="todo" style="color:#8a6d3b; font-size:0.85rem;">
+        ⚙ TODO: formalizar a política de retenção com prazos específicos por
+        tipo de registro e definir rotina de anonimização.
+    </p>
+
+    <h3 style="margin-top:18px;">Relatório de Impacto à Proteção de Dados (RIPD)</h3>
+    <p class="todo" style="color:#8a6d3b; font-size:0.85rem;">
+        ⚙ TODO: elaborar o RIPD do SGP-UNIFEI (art. 38 da LGPD) após a
+        implantação em produção.
+    </p>
+</div>
+
+{% if pode_ver_auditoria %}
+<div class="card">
+    <h3>Auditoria de acessos</h3>
+    <p>Registro de quem acessou o quê e quando (escritas, exclusões e acessos negados).</p>
+    <p><a class="btn" href="{% url 'auditoria' %}">Ver logs de auditoria</a></p>
+</div>
+{% endif %}
+{% endblock %}

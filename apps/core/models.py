@@ -91,6 +91,17 @@ class Perfil(TimeStampedModel):
     )
     perfil = models.CharField(max_length=15, choices=PERFIS, default=PERFIL_ALUNO)
 
+    # LGPD (§6): consentimento explícito para coleta de dados
+    consentimento_lgpd = models.BooleanField(
+        default=False,
+        verbose_name='Consentimento LGPD',
+    )
+    data_consentimento = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Data do consentimento',
+    )
+
     class Meta:
         verbose_name = 'Perfil'
         verbose_name_plural = 'Perfis'
@@ -125,3 +136,44 @@ class Perfil(TimeStampedModel):
             self.PERFIL_PROREITOR: 5,
         }
         return self.nivel >= ordem.get(perfil, 99)
+
+
+class LogAuditoria(TimeStampedModel):
+    """Log de auditoria LGPD: quem acessou o quê e quando (§6).
+
+    Registrado por `AuditoriaMiddleware` (escritas, exclusões e acessos
+    negados) e por sinais de autenticação (login/logout). Leituras comuns
+    (GET) não são registradas para evitar ruído excessivo.
+    """
+    ACOES = [
+        ('login', 'Login'),
+        ('logout', 'Logout'),
+        ('escrita', 'Criação/Alteração'),
+        ('exclusao', 'Exclusão'),
+        ('acesso_negado', 'Acesso negado'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    usuario = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='logs_auditoria',
+        verbose_name='Usuário',
+    )
+    acao = models.CharField(max_length=15, choices=ACOES)
+    caminho = models.CharField(max_length=200)
+    view = models.CharField(max_length=200, blank=True)
+    metodo = models.CharField(max_length=10)
+    status = models.PositiveSmallIntegerField(null=True, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Log de Auditoria'
+        verbose_name_plural = 'Logs de Auditoria'
+        ordering = ['-criado_em']
+
+    def __str__(self):
+        quem = self.usuario.username if self.usuario else 'anônimo'
+        return f'{self.get_acao_display()} — {quem} — {self.caminho}'

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
-from .models import Instituicao, Fomentador, ProcessoSipac, Perfil
+from .models import Instituicao, Fomentador, ProcessoSipac, Perfil, LogAuditoria
 
 @admin.register(Instituicao)
 class InstituicaoAdmin(admin.ModelAdmin):
@@ -42,3 +42,23 @@ class PerfilAdmin(admin.ModelAdmin):
     list_filter = ('perfil',)
     search_fields = ('user__username', 'user__email', 'pessoa__nome')
     raw_id_fields = ('user', 'pessoa')
+
+
+@admin.register(LogAuditoria)
+class LogAuditoriaAdmin(admin.ModelAdmin):
+    """Logs de auditoria são somente leitura (gerados pelo sistema)."""
+    list_display = ('criado_em', 'usuario', 'acao', 'metodo', 'status', 'caminho', 'ip')
+    list_filter = ('acao', 'metodo')
+    search_fields = ('usuario__username', 'caminho', 'view', 'ip')
+    readonly_fields = (
+        'criado_em', 'usuario', 'acao', 'caminho', 'view',
+        'metodo', 'status', 'ip',
+    )
+
+    def has_add_permission(self, request):
+        """Logs são gerados pelo sistema — inclusão manual não é permitida."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Logs são preservados para auditoria."""
+        return False

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Auditoria{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Logs de auditoria</h2>
+    <p style="color:#666;">
+        Quem acessou o quê e quando: sessões (login/logout), criações e
+        alterações, exclusões e acessos negados. Total de registros:
+        <strong>{{ total }}</strong>. Exibindo os 200 mais recentes do filtro.
+    </p>
+
+    <form method="get" style="margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
+        <label>
+            Ação<br>
+            <select name="acao">
+                <option value="">Todas</option>
+                {% for codigo, rotulo in acaoes %}
+                <option value="{{ codigo }}" {% if filtros.acao == codigo %}selected{% endif %}>
+                    {{ rotulo }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            Buscar (usuário, caminho ou IP)<br>
+            <input type="text" name="q" value="{{ filtros.q }}" size="30">
+        </label>
+        <button type="submit" class="btn">Filtrar</button>
+    </form>
+
+    {% if logs %}
+    <table>
+        <tr>
+            <th>Quando</th>
+            <th>Usuário</th>
+            <th>Ação</th>
+            <th>Método</th>
+            <th>Status</th>
+            <th>Caminho</th>
+            <th>View</th>
+            <th>IP</th>
+        </tr>
+        {% for log in logs %}
+        <tr>
+            <td>{{ log.criado_em|date:"d/m/Y H:i:s" }}</td>
+            <td>{{ log.usuario.username|default:"anônimo" }}</td>
+            <td>{{ log.get_acao_display }}</td>
+            <td>{{ log.metodo }}</td>
+            <td>{{ log.status|default:"—" }}</td>
+            <td style="font-size:0.85em; word-break:break-all;">{{ log.caminho }}</td>
+            <td style="font-size:0.85em;">{{ log.view|default:"—" }}</td>
+            <td style="font-size:0.85em;">{{ log.ip|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>Nenhum registro para os filtros informados.</p>
+    {% endif %}
+</div>
+{% endblock %}

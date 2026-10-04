@@ -12,6 +12,9 @@
     {% else %}
         <p style="color:#b71c1c;">Seu usuário não possui perfil de acesso definido. Procure a DIP.</p>
     {% endif %}
+    <p style="font-size:0.9rem; margin-top:4px;">
+        <a href="{% url 'lgpd' %}" style="color:#003366;">Privacidade e LGPD: seus dados e direitos</a>
+    </p>
 </div>
 
 {% if avaliacoes_pendentes %}
