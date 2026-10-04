@@ -280,6 +280,7 @@ class Command(BaseCommand):
                 bolsa=bolsa,
                 defaults={
                     'aluno': bolsa.aluno,
+                    'projeto': bolsa.projeto,
                     'titulo': f'Plano de Trabalho - {bolsa.modalidade.sigla}',
                     'descricao': 'Plano de trabalho para iniciação científica',
                     'objetivos': 'Desenvolver pesquisa científica na área de estudo',

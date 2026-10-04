@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}{{ plano.titulo }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h2 style="margin-bottom:5px;">{{ plano.titulo }}</h2>
+            <p style="font-size:1.05rem;">{{ plano.aluno.nome }} —
+                Bolsa {{ plano.bolsa.modalidade.sigla }} no projeto
+                <a href="{% url 'projeto_detalhe' plano.projeto.pk %}" style="color:#003366;">{{ plano.projeto.codigo }}</a>
+            </p>
+        </div>
+        <div style="text-align:right;">
+            <span class="badge">{{ plano.get_status_display }}</span>
+            {% if pode_editar %}
+                <p style="margin-top:10px;"><a href="{% url 'plano_editar' plano.pk %}" class="btn">Editar</a></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Vínculos</h2>
+    <table>
+        <tr><th style="width:220px;">Aluno</th><td>{{ plano.aluno.nome }} — Matrícula {{ plano.aluno.matricula|default:"—" }}</td></tr>
+        <tr><th>Bolsa</th><td><a href="{% url 'bolsa_detalhe' plano.bolsa.pk %}" style="color:#003366;">{{ plano.bolsa.modalidade.sigla }} ({{ plano.bolsa.data_inicio|date:"d/m/Y" }} — {{ plano.bolsa.data_fim|date:"d/m/Y" }})</a></td></tr>
+        <tr><th>Projeto do docente</th><td><a href="{% url 'projeto_detalhe' plano.projeto.pk %}" style="color:#003366;">{{ plano.projeto.codigo }}</a> — {{ plano.projeto.titulo }} (Coordenador: {{ plano.projeto.coordenador.nome|default:"—" }})</td></tr>
+        {% if plano.data_submissao %}<tr><th>Submetido em</th><td>{{ plano.data_submissao|date:"d/m/Y H:i" }}</td></tr>{% endif %}
+        {% if plano.data_aprovacao %}<tr><th>Aprovado em</th><td>{{ plano.data_aprovacao|date:"d/m/Y H:i" }}</td></tr>{% endif %}
+    </table>
+</div>
+
+<div class="card">
+    <h2>Conteúdo</h2>
+    <table>
+        {% if plano.descricao %}
+        <tr><th style="width:220px;">Descrição</th><td>{{ plano.descricao|linebreaksbr }}</td></tr>
+        {% endif %}
+        {% if plano.objetivos %}
+        <tr><th>Objetivos</th><td>{{ plano.objetivos|linebreaksbr }}</td></tr>
+        {% endif %}
+        {% if plano.metodologia %}
+        <tr><th>Metodologia</th><td>{{ plano.metodologia|linebreaksbr }}</td></tr>
+        {% endif %}
+        <tr>
+            <th>Cronograma</th>
+            <td>
+                {% if plano.cronograma %}
+                    <pre style="background:#f5f7fa; padding:10px; border-radius:4px; white-space:pre-wrap;">{{ plano.cronograma }}</pre>
+                {% else %}—{% endif %}
+            </td>
+        </tr>
+    </table>
+</div>
+
+<p><a href="{% url 'planos_lista' %}" style="color:#003366;">← Voltar à lista</a></p>
+{% endblock %}

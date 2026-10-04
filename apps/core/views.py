@@ -5,6 +5,7 @@ from django.views.decorators.cache import never_cache
 from apps.projetos.models import Projeto, Pessoa
 from apps.bolsas.models import Bolsa
 from apps.editais.models import Edital
+from apps.relatorios.models import PlanoTrabalho
 
 
 def index(request):
@@ -47,7 +48,11 @@ def dashboard(request):
             'mostrar_meus_projetos': True,
         })
     else:
-        # Aluno: vê apenas sua bolsa e relatórios
-        contexto.update({'mostrar_aluno': True})
+        # Aluno: vê seus planos de trabalho; relatórios e comprovantes depois
+        planos = (
+            PlanoTrabalho.objects.filter(aluno=perfil.pessoa).select_related('bolsa__modalidade')
+            if perfil and perfil.pessoa else PlanoTrabalho.objects.none()
+        )
+        contexto.update({'mostrar_aluno': True, 'meus_planos': planos})
 
     return render(request, 'core/dashboard.html', contexto)

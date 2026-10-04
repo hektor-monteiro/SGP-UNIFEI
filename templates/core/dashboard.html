@@ -49,7 +49,22 @@
 {% if mostrar_aluno %}
 <div class="card">
     <h2>Minha área</h2>
-    <p>Aqui serão exibidos seu plano de trabalho, relatórios e comprovantes.</p>
+    {% if meus_planos %}
+        <p>Seus planos de trabalho:</p>
+        <table>
+            <tr><th>Título</th><th>Bolsa</th><th>Status</th></tr>
+            {% for plano in meus_planos %}
+            <tr>
+                <td><a href="{% url 'plano_detalhe' plano.pk %}" style="color:#003366; font-weight:bold;">{{ plano.titulo }}</a></td>
+                <td>{{ plano.bolsa.modalidade.sigla }}</td>
+                <td><span class="badge">{{ plano.get_status_display }}</span></td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Você ainda não possui plano de trabalho. <a href="{% url 'plano_novo' %}" style="color:#003366;">Criar plano de trabalho</a></p>
+    {% endif %}
+    <p style="color:#666; font-size:0.9rem; margin-top:10px;">Aqui serão exibidos relatórios e comprovantes.</p>
 </div>
 {% endif %}
 {% endblock %}

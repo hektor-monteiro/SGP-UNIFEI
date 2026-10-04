@@ -32,6 +32,17 @@
         <tr><th>Término</th><td>{{ bolsa.data_fim|date:"d/m/Y" }}</td></tr>
         <tr><th>Valor mensal</th><td>{% if bolsa.valor_mensal %}R$ {{ bolsa.valor_mensal }}{% else %}—{% endif %}</td></tr>
         <tr><th>Status</th><td><span class="badge">{{ bolsa.get_status_display }}</span></td></tr>
+        <tr>
+            <th>Plano de trabalho</th>
+            <td>
+                {% if plano %}
+                    <a href="{% url 'plano_detalhe' plano.pk %}" style="color:#003366; font-weight:bold;">{{ plano.titulo }}</a>
+                    <span class="badge">{{ plano.get_status_display }}</span>
+                {% elif pode_criar_plano %}
+                    <a href="{% url 'plano_novo' %}?bolsa={{ bolsa.pk }}" style="color:#003366;">Criar plano de trabalho</a>
+                {% else %}—{% endif %}
+            </td>
+        </tr>
     </table>
 </div>
 

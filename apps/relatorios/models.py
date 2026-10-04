@@ -1,12 +1,17 @@
 from django.db import models
 import uuid
 from apps.core.models import TimeStampedModel
-from apps.projetos.models import Pessoa
+from apps.projetos.models import Pessoa, Projeto
 from apps.bolsas.models import Bolsa
 
 class PlanoTrabalho(TimeStampedModel):
+    """Plano de trabalho do aluno, associado à bolsa E ao projeto do docente.
+
+    aluno e projeto são derivados da bolsa (formulário garante a coerência).
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     bolsa = models.OneToOneField(Bolsa, on_delete=models.CASCADE, related_name='plano_trabalho')
+    projeto = models.ForeignKey(Projeto, on_delete=models.CASCADE, related_name='planos_trabalho')
     aluno = models.ForeignKey(Pessoa, on_delete=models.CASCADE, related_name='planos_trabalho')
     titulo = models.CharField(max_length=255)
     descricao = models.TextField(blank=True)

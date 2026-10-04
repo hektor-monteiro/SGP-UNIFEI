@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:750px;">
+    <h2>{{ titulo }}</h2>
+
+    {% if plano %}
+        <p style="color:#666;">Projeto do docente: <strong>{{ plano.projeto.codigo }}</strong> — {{ plano.projeto.titulo }}</p>
+    {% else %}
+        <p style="color:#666;">Aluno e projeto são definidos pela bolsa selecionada.</p>
+    {% endif %}
+
+    {% if form.non_field_errors %}
+        <div class="alert-error">
+            {% for erro in form.non_field_errors %}<p>{{ erro }}</p>{% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+            <p>
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <span style="color:#b71c1c; font-size:0.85rem;">{{ field.errors|first }}</span>
+                {% endif %}
+            </p>
+        {% endfor %}
+        <button type="submit" class="btn">Salvar</button>
+        <a href="{% url 'planos_lista' %}" style="color:#003366; margin-left:15px;">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

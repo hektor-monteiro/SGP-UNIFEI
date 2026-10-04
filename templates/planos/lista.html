@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Planos de Trabalho{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Planos de Trabalho ({{ planos|length }})</h2>
+        {% if pode_criar %}
+            <a href="{% url 'plano_novo' %}" class="btn">+ Novo plano</a>
+        {% endif %}
+    </div>
+
+    <form method="get" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label style="font-size:0.85rem;">Busca</label>
+            <input type="text" name="q" value="{{ filtros.q }}" placeholder="Título do plano" style="width:220px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem;">Status</label>
+            <select name="status" style="padding:9px; border:1px solid #ccc; border-radius:4px;">
+                <option value="">— Todos —</option>
+                {% for valor, rotulo in status_choices %}
+                    <option value="{{ valor }}" {% if filtros.status == valor %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn">Filtrar</button>
+        {% if filtros.q or filtros.status %}
+            <a href="{% url 'planos_lista' %}" style="color:#003366;">Limpar</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    {% if planos %}
+        <table>
+            <tr>
+                <th>Título</th>
+                <th>Aluno</th>
+                <th>Bolsa</th>
+                <th>Projeto</th>
+                <th>Status</th>
+                <th>Ação</th>
+            </tr>
+            {% for plano in planos %}
+            <tr>
+                <td><a href="{% url 'plano_detalhe' plano.pk %}" style="color:#003366; font-weight:bold;">{{ plano.titulo }}</a></td>
+                <td>{{ plano.aluno.nome }}</td>
+                <td>{{ plano.bolsa.modalidade.sigla }}</td>
+                <td><a href="{% url 'projeto_detalhe' plano.projeto.pk %}" style="color:#003366;">{{ plano.projeto.codigo }}</a></td>
+                <td><span class="badge">{{ plano.get_status_display }}</span></td>
+                <td>
+                    {% if pode_gerir or plano.pk in editaveis %}
+                        <a href="{% url 'plano_editar' plano.pk %}" style="color:#003366;">Editar</a>
+                    {% else %}
+                        <a href="{% url 'plano_detalhe' plano.pk %}" style="color:#666;">Ver</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Nenhum plano encontrado.</p>
+    {% endif %}
+</div>
+{% endblock %}

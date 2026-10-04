@@ -108,9 +108,21 @@ def detalhe(request, pk):
         if not perfil.pessoa or bolsa.aluno_id != perfil.pessoa.id:
             raise PermissionDenied
 
+    # Plano de trabalho vinculado (OneToOne) e quem pode criá-lo
+    plano = getattr(bolsa, 'plano_trabalho', None)
+    pode_criar_plano = plano is None and (
+        _pode_editar(request.user, bolsa)
+        or bool(
+            perfil and perfil.perfil == Perfil.PERFIL_ALUNO
+            and perfil.pessoa and bolsa.aluno_id == perfil.pessoa.id
+        )
+    )
+
     contexto = {
         'bolsa': bolsa,
         'pode_editar': _pode_editar(request.user, bolsa),
+        'plano': plano,
+        'pode_criar_plano': pode_criar_plano,
     }
     return render(request, 'bolsas/detalhe.html', contexto)
 
