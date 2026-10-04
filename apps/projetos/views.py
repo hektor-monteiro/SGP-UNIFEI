@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
 
 from apps.core.models import Perfil
 
@@ -66,6 +67,7 @@ def _visiveis_para(user):
 
 
 @login_required
+@never_cache
 def lista(request):
     """Lista de projetos com filtros por status e instituto."""
     projetos = _visiveis_para(request.user)
@@ -106,6 +108,7 @@ def lista(request):
 
 
 @login_required
+@never_cache
 def detalhe(request, pk):
     """Detalhe do projeto com equipe e bolsas."""
     projeto = get_object_or_404(
@@ -129,6 +132,7 @@ def detalhe(request, pk):
 
 
 @login_required
+@never_cache
 def novo(request):
     """Criação de projeto."""
     if not _pode_criar(request.user):
@@ -164,20 +168,33 @@ def novo(request):
 
 
 @login_required
+@never_cache
 def editar(request, pk):
     """Edição de projeto."""
     projeto = get_object_or_404(Projeto, pk=pk)
     if not _pode_editar(request.user, projeto):
         raise PermissionDenied
 
+    perfil = _perfil_de(request.user)
+    docente_vinculado = (
+        perfil is not None
+        and perfil.perfil == Perfil.PERFIL_DOCENTE
+        and perfil.pessoa
+    )
+
     if request.method == 'POST':
         form = ProjetoForm(request.POST, instance=projeto)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f'Projeto {projeto.codigo} atualizado com sucesso.')
-            return redirect('projeto_detalhe', pk=projeto.pk)
     else:
         form = ProjetoForm(instance=projeto)
+
+    if docente_vinculado:
+        # Docente edita os dados, mas NÃO transfere a coordenação (só técnico+)
+        form.fields['coordenador'].disabled = True
+
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, f'Projeto {projeto.codigo} atualizado com sucesso.')
+        return redirect('projeto_detalhe', pk=projeto.pk)
 
     return render(request, 'projetos/form.html', {
         'form': form,

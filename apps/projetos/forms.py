@@ -22,9 +22,11 @@ class ProjetoForm(forms.ModelForm):
             'coordenador', 'processo_sipac', 'instituicao',
         ]
         widgets = {
-            'data_registro': forms.DateInput(attrs={'type': 'date'}),
-            'data_inicio': forms.DateInput(attrs={'type': 'date'}),
-            'data_termino': forms.DateInput(attrs={'type': 'date'}),
+            # format='%Y-%m-%d': o input date do HTML exige AAAA-MM-DD;
+            # sem isso o Django renderiza dd/mm/aaaa e o navegador mostra em branco
+            'data_registro': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            'data_inicio': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            'data_termino': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'descricao': forms.Textarea(attrs={'rows': 4}),
         }
 

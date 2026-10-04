@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
+from django.views.decorators.cache import never_cache
 
 from apps.projetos.models import Projeto, Pessoa
 from apps.bolsas.models import Bolsa
@@ -14,6 +15,7 @@ def index(request):
 
 
 @login_required
+@never_cache
 def dashboard(request):
     """Painel do usuário autenticado com resumo de dados conforme seu perfil."""
     perfil = getattr(request.user, 'perfil', None)
@@ -32,8 +34,13 @@ def dashboard(request):
             'mostrar_tudo': True,
         })
     elif perfil and perfil.perfil == 'docente':
-        # Docente vê apenas seus projetos
-        meus_projetos = Projeto.objects.filter(coordenador__email=request.user.email)
+        # Docente vê apenas seus projetos (vínculo via Perfil.pessoa;
+        # NÃO filtrar por e-mail: o e-mail do usuário pode diferir do da Pessoa)
+        meus_projetos = (
+            Projeto.objects.filter(coordenador=perfil.pessoa)
+            if perfil.pessoa
+            else Projeto.objects.none()
+        )
         contexto.update({
             'meus_projetos': meus_projetos,
             'total_projetos': meus_projetos.count(),

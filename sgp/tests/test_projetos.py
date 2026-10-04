@@ -161,3 +161,79 @@ class RegraNegocioTests(TestCase):
         self.assertEqual(response.status_code, 302)
         projeto = Projeto.objects.get(codigo='NOVO-2026')
         self.assertEqual(projeto.coordenador, self.docente)
+
+
+class PainelDocenteTests(TestCase):
+    """O painel do docente deve listar seus projetos (vínculo por Pessoa, não e-mail)."""
+
+    def setUp(self):
+        self.docente = Pessoa.objects.create(
+            nome='Docente Painel', email='painel@unifei.edu.br', tipo='docente',
+        )
+        self.projeto = _criar_projeto(self.docente)
+        # E-mail do usuário DIFERENTE do e-mail da Pessoa (como no demo)
+        self.user = User.objects.create_user('doc_painel', password='x')
+        Perfil.objects.create(user=self.user, perfil=Perfil.PERFIL_DOCENTE, pessoa=self.docente)
+
+    def test_painel_mostra_meus_projetos(self):
+        self.client.login(username='doc_painel', password='x')
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Meus projetos')
+        self.assertContains(response, self.projeto.codigo)
+        self.assertNotContains(response, 'Você ainda não possui projetos')
+
+
+class EdicaoValoresTests(TestCase):
+    """O formulário de edição deve abrir com os valores do projeto."""
+
+    def setUp(self):
+        inst, _ = Instituicao.objects.get_or_create(sigla='EEI', defaults={'nome': 'EEI'})
+        self.docente = Pessoa.objects.create(
+            nome='Docente Edição', email='edicao@unifei.edu.br',
+            tipo='docente', instituicao=inst,
+        )
+        self.user = _criar_usuario('doc_edicao', Perfil.PERFIL_DOCENTE, self.docente)
+        self.projeto = Projeto.objects.create(
+            codigo='PVDI777-2026',
+            titulo='Projeto com datas',
+            data_registro=date(2026, 1, 10),
+            data_inicio=date(2026, 1, 15),
+            data_termino=date(2026, 12, 20),
+            coordenador=self.docente,
+            instituicao=inst,
+        )
+
+    def test_form_abre_com_valores(self):
+        """Datas em AAAA-MM-DD: o que o input date do HTML exige para exibir."""
+        self.client.login(username='doc_edicao', password='x')
+        response = self.client.get(
+            reverse('projeto_editar', kwargs={'pk': self.projeto.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="PVDI777-2026"')
+        self.assertContains(response, 'value="2026-01-15"')
+        self.assertContains(response, 'value="2026-12-20"')
+
+    def test_docente_nao_transfere_coordenacao(self):
+        """POST alterando o coordenador é ignorado (campo desabilitado p/ docente)."""
+        outro = Pessoa.objects.create(
+            nome='Outro Coordenador', email='outro@unifei.edu.br', tipo='docente',
+        )
+        self.client.login(username='doc_edicao', password='x')
+        response = self.client.post(
+            reverse('projeto_editar', kwargs={'pk': self.projeto.pk}),
+            {
+                'codigo': 'PVDI777-2026',
+                'titulo': 'Projeto atualizado',
+                'data_registro': '2026-01-10',
+                'data_inicio': '2026-01-15',
+                'data_termino': '2026-12-20',
+                'status': 'vigente',
+                'coordenador': outro.pk,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.projeto.refresh_from_db()
+        self.assertEqual(self.projeto.titulo, 'Projeto atualizado')
+        self.assertEqual(self.projeto.coordenador, self.docente)
