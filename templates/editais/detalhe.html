@@ -37,6 +37,7 @@
         <tr><th>Início</th><td>{{ edital.data_inicio|date:"d/m/Y" }}</td></tr>
         <tr><th>Término</th><td>{{ edital.data_fim|date:"d/m/Y" }}</td></tr>
         <tr><th>Status</th><td><span class="badge">{{ edital.get_status_display }}</span></td></tr>
+        <tr><th>Nota mínima para aprovação</th><td>{{ edital.nota_minima }}</td></tr>
         <tr><th>Criado por</th><td>{{ edital.criado_por.username|default:"—" }}</td></tr>
         {% if edital.validado_por %}
         <tr><th>Validado por</th><td>{{ edital.validado_por.username }} em {{ edital.data_validacao|date:"d/m/Y H:i" }}</td></tr>

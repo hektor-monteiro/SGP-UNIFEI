@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Critérios de avaliação{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Critérios de avaliação ({{ criterios|length }})</h2>
+        {% if pode_gerir %}
+            <a href="{% url 'criterio_novo' %}" class="btn">+ Novo critério</a>
+        {% endif %}
+    </div>
+    <p style="color:#666; margin-top:10px;">
+        Os pesos definem a contribuição de cada critério na nota final,
+        calculada como <strong>média ponderada</strong>.
+    </p>
+</div>
+
+<div class="card">
+    {% if criterios %}
+        <table>
+            <tr>
+                <th>Nome</th>
+                <th>Descrição</th>
+                <th>Peso</th>
+                <th>Situação</th>
+                {% if pode_gerir %}<th>Ação</th>{% endif %}
+            </tr>
+            {% for criterio in criterios %}
+            <tr>
+                <td style="font-weight:bold;">{{ criterio.nome }}</td>
+                <td>{{ criterio.descricao|default:"—"|truncatechars:70 }}</td>
+                <td>{{ criterio.peso }}</td>
+                <td><span class="badge">{{ criterio.ativo|yesno:"Ativo,Inativo" }}</span></td>
+                {% if pode_gerir %}
+                <td><a href="{% url 'criterio_editar' criterio.pk %}" style="color:#003366;">Editar</a></td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Nenhum critério cadastrado.</p>
+    {% endif %}
+</div>
+{% endblock %}

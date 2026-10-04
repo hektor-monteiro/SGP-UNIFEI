@@ -39,6 +39,50 @@
     </table>
 </div>
 
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Avaliações ({{ avaliacoes|length }})</h2>
+        {% if pode_gerir %}
+            <div>
+                <a href="{% url 'criterios_lista' %}" class="btn" style="background:#666;">Critérios</a>
+                <a href="{% url 'proposta_alocar' proposta.pk %}" class="btn">+ Alocar avaliador</a>
+            </div>
+        {% endif %}
+    </div>
+    {% if avaliacoes %}
+    <table style="margin-top:15px;">
+        <tr>
+            <th>Avaliador</th>
+            <th>Alocado por</th>
+            <th>Status</th>
+            <th>Nota</th>
+            <th>Ação</th>
+        </tr>
+        {% for av in avaliacoes %}
+        <tr>
+            <td>{{ av.avaliador.get_full_name|default:av.avaliador.username }}</td>
+            <td>{{ av.alocado_por.username|default:"—" }}</td>
+            <td><span class="badge">{{ av.get_status_display }}</span></td>
+            <td>{{ av.nota|default_if_none:"—" }}</td>
+            <td>
+                <a href="{% url 'avaliacao_detalhe' av.pk %}" style="color:#003366;">
+                    {% if av.avaliador == user %}{% if av.status == 'alocada' %}Realizar avaliação{% else %}Ver avaliação{% endif %}{% else %}Ver{% endif %}
+                </a>
+                {% if pode_gerir %}
+                    <form method="post" action="{% url 'avaliacao_remover' av.pk %}" style="display:inline; margin-left:8px;">
+                        {% csrf_token %}
+                        <button type="submit" style="background:none; border:none; color:#b71c1c; cursor:pointer; font-size:0.85rem; padding:0;">Remover</button>
+                    </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+        <p style="margin-top:10px;">Nenhum avaliador alocado até o momento.</p>
+    {% endif %}
+</div>
+
 <p>
     {% if proposta.edital %}
         <a href="{% url 'edital_detalhe' proposta.edital.pk %}" style="color:#003366;">← Voltar ao edital</a>

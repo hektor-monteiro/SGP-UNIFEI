@@ -16,6 +16,8 @@ Propostas (submissão a editais):
 - Detalhe/Edição: submetente ou técnico+; edição somente enquanto "submetida".
 - Listagem no edital: técnico+ vê todas; demais veem apenas as próprias.
 """
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -29,8 +31,14 @@ from apps.core.permissions import perfil_de, pode_gerir
 from apps.bolsas.models import ModalidadeBolsa
 from apps.projetos.models import Proposta
 
-from .forms import EditalForm, PropostaForm
-from .models import Edital
+from .forms import (
+    AlocacaoForm,
+    AvaliacaoForm,
+    CriterioForm,
+    EditalForm,
+    PropostaForm,
+)
+from .models import Avaliacao, CriterioAvaliacao, Edital, NotaCriterio
 
 # Ações do fluxo: origens permitidas, destino, nível mínimo e rótulo
 ACOES = {
@@ -88,6 +96,51 @@ def _pode_submeter(perfil) -> bool:
         Perfil.PERFIL_ALUNO,
         Perfil.PERFIL_DOCENTE,
     )
+
+
+def _media_ponderada(notas) -> Decimal | None:
+    """Média ponderada das notas. `notas` = [(nota, peso), ...]."""
+    soma_pesos = sum((peso for _, peso in notas), Decimal('0'))
+    if soma_pesos <= 0:
+        return None
+    total = sum((nota * peso for nota, peso in notas), Decimal('0'))
+    return (total / soma_pesos).quantize(Decimal('0.01'))
+
+
+def _recalcular_proposta(proposta) -> None:
+    """Reprocessa status e nota final da proposta após mudanças nas avaliações.
+
+    Regras:
+    - Sem alocações: volta para 'submetida'.
+    - Com avaliações concluídas: nota final = média simples das notas.
+    - Todas as alocações concluídas: aprovação automática se a nota final
+      for igual ou superior à nota mínima do edital (definida pelo técnico+).
+    - Caso contrário: 'em_avaliacao'.
+    """
+    avaliacoes = list(proposta.avaliacoes.all())
+    concluidas = [a for a in avaliacoes if a.status == 'concluida' and a.nota is not None]
+
+    if not avaliacoes:
+        proposta.status = 'submetida'
+        proposta.nota_final = None
+    elif not concluidas:
+        proposta.status = 'em_avaliacao'
+        proposta.nota_final = None
+    else:
+        media = sum((a.nota for a in concluidas), Decimal('0')) / len(concluidas)
+        proposta.nota_final = media.quantize(Decimal('0.01'))
+        if len(concluidas) == len(avaliacoes):
+            minima = (
+                proposta.edital.nota_minima
+                if proposta.edital is not None
+                else Decimal('6.00')
+            )
+            proposta.status = (
+                'aprovada' if proposta.nota_final >= minima else 'reprovada'
+            )
+        else:
+            proposta.status = 'em_avaliacao'
+    proposta.save()
 
 
 @login_required
@@ -250,6 +303,13 @@ def _acesso_a_proposta(perfil, proposta) -> bool:
     return perfil is not None and perfil.pessoa_id == proposta.submetido_por_id
 
 
+def _pode_ver_proposta(user, perfil, proposta) -> bool:
+    """Acesso de leitura: gerente, submetente ou avaliador alocado."""
+    if _acesso_a_proposta(perfil, proposta):
+        return True
+    return proposta.avaliacoes.filter(avaliador=user).exists()
+
+
 @login_required
 @never_cache
 def proposta_nova(request, pk):
@@ -297,18 +357,24 @@ def proposta_nova(request, pk):
 @login_required
 @never_cache
 def proposta_detalhe(request, pk):
-    """Detalhe da proposta: submetente ou técnico+."""
+    """Detalhe da proposta: submetente, avaliador alocado ou técnico+."""
     proposta = get_object_or_404(
         Proposta.objects.select_related('edital', 'submetido_por'),
         pk=pk,
     )
     perfil = perfil_de(request.user)
-    if not _acesso_a_proposta(perfil, proposta):
+    if not _pode_ver_proposta(request.user, perfil, proposta):
         raise PermissionDenied
 
     contexto = {
         'proposta': proposta,
-        'pode_editar': proposta.status == 'submetida',
+        'pode_editar': (
+            proposta.status == 'submetida' and _acesso_a_proposta(perfil, proposta)
+        ),
+        'pode_gerir': pode_gerir(perfil),
+        'avaliacoes': proposta.avaliacoes.select_related(
+            'avaliador', 'alocado_por',
+        ).order_by('-data_avaliacao'),
     }
     return render(request, 'editais/proposta_detalhe.html', contexto)
 
@@ -343,3 +409,223 @@ def proposta_editar(request, pk):
         'edital': proposta.edital,
         'titulo': 'Editar proposta',
     })
+
+
+# --------------------------------------------------------------------------
+# Critérios de avaliação (criação/edição por técnico+)
+# --------------------------------------------------------------------------
+
+@login_required
+@never_cache
+def criterios_lista(request):
+    """Lista de critérios de avaliação (visível a todos; gestão por técnico+)."""
+    contexto = {
+        'criterios': CriterioAvaliacao.objects.all(),
+        'pode_gerir': pode_gerir(perfil_de(request.user)),
+    }
+    return render(request, 'editais/criterios_lista.html', contexto)
+
+
+@login_required
+@never_cache
+def criterio_novo(request):
+    """Criação de critério de avaliação com peso (técnico+)."""
+    if not pode_gerir(perfil_de(request.user)):
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        form = CriterioForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Critério criado com sucesso.')
+            return redirect('criterios_lista')
+    else:
+        form = CriterioForm()
+
+    return render(request, 'editais/criterios_form.html', {
+        'form': form,
+        'titulo': 'Novo critério de avaliação',
+    })
+
+
+@login_required
+@never_cache
+def criterio_editar(request, pk):
+    """Edição de critério de avaliação (técnico+)."""
+    if not pode_gerir(perfil_de(request.user)):
+        raise PermissionDenied
+
+    criterio = get_object_or_404(CriterioAvaliacao, pk=pk)
+
+    if request.method == 'POST':
+        form = CriterioForm(request.POST, instance=criterio)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Critério atualizado com sucesso.')
+            return redirect('criterios_lista')
+    else:
+        form = CriterioForm(instance=criterio)
+
+    return render(request, 'editais/criterios_form.html', {
+        'form': form,
+        'titulo': f'Editar critério {criterio.nome}',
+    })
+
+
+# --------------------------------------------------------------------------
+# Alocação e realização de avaliações
+# --------------------------------------------------------------------------
+
+@login_required
+@never_cache
+def proposta_alocar(request, pk):
+    """Aloca docente avaliador à proposta (somente técnico+).
+
+    Permte múltiplos avaliadores (banca); a realocação é feita removendo
+    a alocação inadequada e alocando outro docente.
+    """
+    if not pode_gerir(perfil_de(request.user)):
+        raise PermissionDenied
+
+    proposta = get_object_or_404(Proposta.objects.select_related('edital'), pk=pk)
+
+    if request.method == 'POST':
+        form = AlocacaoForm(request.POST)
+        if form.is_valid():
+            avaliador = form.cleaned_data['avaliador']
+            if Avaliacao.objects.filter(
+                proposta=proposta, avaliador=avaliador,
+            ).exists():
+                form.add_error(
+                    'avaliador',
+                    'Este docente já está alocado para esta proposta.',
+                )
+            else:
+                Avaliacao.objects.create(
+                    tipo='proposta',
+                    proposta=proposta,
+                    avaliador=avaliador,
+                    alocado_por=request.user,
+                    status='alocada',
+                )
+                _recalcular_proposta(proposta)
+                messages.success(
+                    request,
+                    f'Avaliação alocada para {avaliador.get_full_name() or avaliador.username}.',
+                )
+                return redirect('proposta_detalhe', pk=proposta.pk)
+    else:
+        form = AlocacaoForm()
+
+    return render(request, 'editais/alocar.html', {
+        'form': form,
+        'proposta': proposta,
+    })
+
+
+@login_required
+@never_cache
+def avaliacao_detalhe(request, pk):
+    """Formulário de avaliação de proposta (o próprio avaliador preenche).
+
+    Notas de 0 a 10 por critério ativo + parecer; a nota final é a média
+    ponderada pelos pesos dos critérios. Gerentes apenas visualizam.
+    """
+    avaliacao = get_object_or_404(
+        Avaliacao.objects.select_related('proposta__edital', 'avaliador'),
+        pk=pk,
+        tipo='proposta',
+    )
+    perfil = perfil_de(request.user)
+    sou_avaliador = avaliacao.avaliador_id == request.user.id
+    if not sou_avaliador and not pode_gerir(perfil):
+        raise PermissionDenied
+
+    criterios = list(CriterioAvaliacao.objects.filter(ativo=True))
+    notas_existentes = {
+        n.criterio_id: n.nota for n in avaliacao.notas.select_related('criterio')
+    }
+
+    if request.method == 'POST':
+        if not sou_avaliador:
+            raise PermissionDenied
+        if not criterios:
+            messages.error(
+                request,
+                'Não há critérios de avaliação ativos. Procure o técnico da DIP.',
+            )
+            return redirect('avaliacao_detalhe', pk=avaliacao.pk)
+
+        form = AvaliacaoForm(request.POST, criterios=criterios)
+        if form.is_valid():
+            for criterio in criterios:
+                NotaCriterio.objects.update_or_create(
+                    avaliacao=avaliacao,
+                    criterio=criterio,
+                    defaults={
+                        'nota': form.cleaned_data[f'nota_{criterio.pk}'],
+                    },
+                )
+            notas = [
+                (n.nota, n.criterio.peso)
+                for n in avaliacao.notas.select_related('criterio')
+            ]
+            media = _media_ponderada(notas)
+            if media is None:
+                messages.error(
+                    request,
+                    'Não foi possível calcular a nota final: '
+                    'verifique os pesos dos critérios.',
+                )
+                return redirect('avaliacao_detalhe', pk=avaliacao.pk)
+
+            avaliacao.parecer = form.cleaned_data['parecer']
+            avaliacao.nota = media
+            avaliacao.status = 'concluida'
+            avaliacao.data_conclusao = now()
+            avaliacao.save()
+            _recalcular_proposta(avaliacao.proposta)
+            messages.success(
+                request,
+                f'Avaliação concluída. Nota final (média ponderada): {media}.',
+            )
+            return redirect('avaliacao_detalhe', pk=avaliacao.pk)
+    else:
+        iniciais = {'parecer': avaliacao.parecer}
+        for criterio in criterios:
+            if criterio.pk in notas_existentes:
+                iniciais[f'nota_{criterio.pk}'] = notas_existentes[criterio.pk]
+        form = AvaliacaoForm(initial=iniciais, criterios=criterios)
+
+    contexto = {
+        'avaliacao': avaliacao,
+        'proposta': avaliacao.proposta,
+        'form': form,
+        'criterios': criterios,
+        'notas_existentes': notas_existentes,
+        'linhas_notas': [
+            {'criterio': n.criterio, 'nota': n.nota}
+            for n in avaliacao.notas.select_related('criterio')
+        ],
+        'sou_avaliador': sou_avaliador,
+        'pode_gerir': pode_gerir(perfil),
+    }
+    return render(request, 'editais/avaliacao.html', contexto)
+
+
+@login_required
+@require_POST
+def avaliacao_remover(request, pk):
+    """Remove alocação de avaliação para realocação (somente técnico+)."""
+    if not pode_gerir(perfil_de(request.user)):
+        raise PermissionDenied
+
+    avaliacao = get_object_or_404(Avaliacao, pk=pk, tipo='proposta')
+    proposta = avaliacao.proposta
+    avaliacao.delete()
+    _recalcular_proposta(proposta)
+    messages.success(
+        request,
+        'Alocação removida. Um novo avaliador pode ser alocado.',
+    )
+    return redirect('proposta_detalhe', pk=proposta.pk)

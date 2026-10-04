@@ -4,7 +4,7 @@ from django.views.decorators.cache import never_cache
 
 from apps.projetos.models import Projeto, Pessoa
 from apps.bolsas.models import Bolsa
-from apps.editais.models import Edital
+from apps.editais.models import Edital, Avaliacao
 from apps.relatorios.models import PlanoTrabalho
 
 
@@ -23,6 +23,14 @@ def dashboard(request):
     contexto = {
         'perfil': perfil,
         'e_superuser': request.user.is_superuser,
+        # Avaliações de propostas alocadas para o usuário e ainda pendentes
+        'avaliacoes_pendentes': (
+            Avaliacao.objects.filter(
+                avaliador=request.user,
+                status='alocada',
+                tipo='proposta',
+            ).select_related('proposta__edital')
+        ),
     }
 
     # Dados visíveis conforme nível hierárquico

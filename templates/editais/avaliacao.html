@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Avaliação de proposta{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h2 style="margin-bottom:5px;">Avaliação de proposta</h2>
+            <p style="margin:0;">
+                <strong>{{ proposta.titulo }}</strong>
+                {% if proposta.edital %} — edital <a href="{% url 'edital_detalhe' proposta.edital.pk %}" style="color:#003366;">{{ proposta.edital.codigo }}</a>{% endif %}
+            </p>
+            <p style="color:#666; margin:5px 0 0;">Avaliador: {{ avaliacao.avaliador.get_full_name|default:avaliacao.avaliador.username }}</p>
+        </div>
+        <div style="text-align:right;">
+            <span class="badge">{{ avaliacao.get_status_display }}</span>
+            {% if avaliacao.nota is not None %}
+                <p style="margin-top:8px; font-size:1.2rem;"><strong>Nota: {{ avaliacao.nota }}</strong></p>
+            {% endif %}
+        </div>
+    </div>
+    {% if proposta.nota_final is not None %}
+        <p style="margin-top:10px; color:#666;">
+            Nota final da proposta (média entre avaliadores): <strong>{{ proposta.nota_final }}</strong>
+            — situação: <span class="badge">{{ proposta.get_status_display }}</span>
+        </p>
+    {% endif %}
+    {% if pode_gerir %}
+        <p style="margin-top:10px;"><a href="{% url 'proposta_detalhe' proposta.pk %}" style="color:#003366;">← Voltar à proposta</a></p>
+    {% endif %}
+</div>
+
+{% if sou_avaliador %}
+<div class="card">
+    <h2>Notas (0 a 10 por critério)</h2>
+    <p style="color:#666;">A nota final é a <strong>média ponderada</strong> das notas pelos pesos dos critérios.</p>
+
+    {% if form.non_field_errors %}
+        <div class="alert-error">
+            {% for erro in form.non_field_errors %}<p>{{ erro }}</p>{% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+            <p>
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <span style="color:#b71c1c; font-size:0.85rem;">{{ field.errors|first }}</span>
+                {% endif %}
+            </p>
+        {% endfor %}
+        <button type="submit" class="btn">Concluir avaliação</button>
+    </form>
+</div>
+{% else %}
+    <div class="card">
+        <h2>Notas por critério</h2>
+        {% if linhas_notas %}
+            <table>
+                <tr><th>Crítério</th><th>Peso</th><th>Nota</th></tr>
+                {% for linha in linhas_notas %}
+                <tr>
+                    <td>{{ linha.criterio.nome }}</td>
+                    <td>{{ linha.criterio.peso }}</td>
+                    <td>{{ linha.nota }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p>Avaliação ainda não concluída.</p>
+        {% endif %}
+        {% if avaliacao.parecer %}
+            <p><strong>Parecer:</strong></p>
+            <p style="color:#666;">{{ avaliacao.parecer|linebreaksbr }}</p>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}

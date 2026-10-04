@@ -82,6 +82,7 @@ class EditalAcessoTests(TestCase):
             'data_inicio': '2026-05-01',
             'data_fim': '2026-08-31',
             'modalidade': self.modalidade.pk,
+            'nota_minima': '6.00',
         })
         self.assertEqual(response.status_code, 302)
         edital = Edital.objects.get(codigo='NOVO-EDT-01')

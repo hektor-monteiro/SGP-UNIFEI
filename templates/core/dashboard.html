@@ -14,6 +14,22 @@
     {% endif %}
 </div>
 
+{% if avaliacoes_pendentes %}
+<div class="card">
+    <h2>Propostas a avaliar ({{ avaliacoes_pendentes|length }})</h2>
+    <table>
+        <tr><th>Proposta</th><th>Edital</th><th>Ação</th></tr>
+        {% for av in avaliacoes_pendentes %}
+        <tr>
+            <td><a href="{% url 'avaliacao_detalhe' av.pk %}" style="color:#003366; font-weight:bold;">{{ av.proposta.titulo|truncatechars:70 }}</a></td>
+            <td>{{ av.proposta.edital.codigo|default:"—" }}</td>
+            <td><a href="{% url 'avaliacao_detalhe' av.pk %}" style="color:#003366;">Realizar avaliação</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+
 {% if mostrar_tudo %}
 <div class="card">
     <h2>Visão geral</h2>

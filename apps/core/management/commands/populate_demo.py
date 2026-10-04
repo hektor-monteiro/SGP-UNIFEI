@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from apps.core.models import Instituicao, Fomentador, ProcessoSipac
 from apps.projetos.models import Pessoa, Projeto, Proposta
 from apps.bolsas.models import ModalidadeBolsa, Bolsa
-from apps.editais.models import Edital, Avaliacao
+from apps.editais.models import Edital, Avaliacao, CriterioAvaliacao
 from apps.equipes.models import MembroEquipe
 from apps.comprovantes.models import Comprovante
 from apps.relatorios.models import PlanoTrabalho, Relatorio
@@ -53,6 +53,12 @@ class Command(BaseCommand):
 
         usuarios = self.criar_usuarios_demo(alunos, docentes)
         self.stdout.write(f'  ✓ {len(usuarios)} usuários demo criados')
+
+        criterios = self.criar_criterios()
+        self.stdout.write(f'  ✓ {len(criterios)} critérios de avaliação criados')
+
+        alocacoes = self.criar_avaliacoes(editais)
+        self.stdout.write(f'  ✓ {alocacoes} alocações de avaliação criadas')
 
         self.stdout.write(self.style.SUCCESS('População concluída com sucesso!'))
 
@@ -334,6 +340,50 @@ class Command(BaseCommand):
                         'nota_final': round(random.uniform(6.0, 10.0), 2) if random.random() > 0.5 else None,
                     }
                 )
+
+    def criar_criterios(self):
+        """Cria critérios de avaliação com pesos (usados na média ponderada)."""
+        criterios = []
+        dados = [
+            ('Relevância do tema', 'Contribuição do tema para a área e para a UNIFEI.', 3.00),
+            ('Metodologia', 'Adequação do método proposto aos objetivos.', 3.00),
+            ('Viabilidade', 'Viabilidade técnica, prazos e recursos disponíveis.', 2.00),
+        ]
+        for nome, descricao, peso in dados:
+            criterio, _ = CriterioAvaliacao.objects.get_or_create(
+                nome=nome,
+                defaults={'descricao': descricao, 'peso': peso},
+            )
+            criterios.append(criterio)
+        return criterios
+
+    def criar_avaliacoes(self, editais):
+        """Aloca os usuários docentes como avaliadores de algumas propostas."""
+        from django.contrib.auth.models import User
+
+        docentes = list(
+            User.objects.filter(perfil__perfil='docente').order_by('username')
+        )
+        if not docentes:
+            return 0
+
+        alocadas = 0
+        propostas = Proposta.objects.filter(
+            edital__in=editais, status='submetida',
+        ).order_by('data_submissao')[:4]
+        for proposta in propostas:
+            avaliador = docentes[alocadas % len(docentes)]
+            _, created = Avaliacao.objects.get_or_create(
+                tipo='proposta',
+                proposta=proposta,
+                avaliador=avaliador,
+                defaults={'status': 'alocada'},
+            )
+            if created:
+                alocadas += 1
+                proposta.status = 'em_avaliacao'
+                proposta.save()
+        return alocadas
 
     def criar_comprovantes(self, bolsas, projetos, alunos, docentes):
         for bolsa in bolsas:
