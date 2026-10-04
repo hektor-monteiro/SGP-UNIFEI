@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Indicadores{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Indicadores de pesquisa</h2>
+    <p style="color:#666;">Indicadores para prestação de contas da DIP e das agências de fomento.</p>
+    <div class="stats">
+        <div class="stat"><div class="num">{{ total_projetos }}</div><div class="label">Projetos</div></div>
+        <div class="stat"><div class="num">{{ total_bolsas_ativas }}</div><div class="label">Bolsas ativas</div></div>
+        <div class="stat"><div class="num">{{ total_editais }}</div><div class="label">Editais</div></div>
+        <div class="stat"><div class="num">{{ taxa_conclusao }}%</div><div class="label">Conclusão de projetos</div></div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>5.1 Governamentais e de agências de fomento</h2>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:25px;">
+        <div>
+            <h3>Bolsas por modalidade</h3>
+            {% if bolsas_modalidade %}
+            <table>
+                <tr><th>Modalidade</th><th>Total</th><th>Ativas</th></tr>
+                {% for m in bolsas_modalidade %}
+                <tr>
+                    <td>{{ m.modalidade__sigla }}</td>
+                    <td>{{ m.total }}</td>
+                    <td>{{ m.ativas }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}<p>Nenhuma bolsa registrada.</p>{% endif %}
+        </div>
+
+        <div>
+            <h3>Bolsas por fomentador</h3>
+            {% if bolsas_fomentador %}
+            <table>
+                <tr><th>Fomentador</th><th>Total</th></tr>
+                {% for f in bolsas_fomentador %}
+                <tr>
+                    <td>{{ f.fomentador__sigla|default:"Não informado" }}</td>
+                    <td>{{ f.total }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}<p>Nenhuma bolsa registrada.</p>{% endif %}
+        </div>
+    </div>
+
+    <div class="stats" style="margin-top:20px;">
+        <div class="stat"><div class="num">{{ projetos_concluidos }}/{{ total_projetos }}</div><div class="label">Projetos concluídos</div></div>
+        <div class="stat"><div class="num">{{ alunos_concluiram }}</div><div class="label">Alunos que concluíram a bolsa</div></div>
+        <div class="stat"><div class="num">{{ externos_ativos }}/{{ externos_total }}</div><div class="label">Membros externos (ativos/total)</div></div>
+        <div class="stat"><div class="num">R$ {{ recursos_internos|floatformat:2 }}</div><div class="label">Recursos internos vinculados</div></div>
+        <div class="stat"><div class="num">R$ {{ recursos_externos|floatformat:2 }}</div><div class="label">Recursos externos vinculados</div></div>
+    </div>
+
+    <p class="todo" style="color:#8a6d3b; font-size:0.85rem; margin-top:12px;">
+        ⚙ TODO: projetos por área/departamento do conhecimento (campo não existe no modelo);
+        distribuição por gênero, raça e região (campos sensíveis — requer definição LGPD);
+        publicações resultantes de projetos (modelo não existe);
+        execução orçamentária real (hoje são apenas os recursos vinculados).
+    </p>
+</div>
+
+<div class="card">
+    <h2>5.2 Indicadores de efetividade</h2>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:25px;">
+        <div>
+            <h3>Evolução temporal — bolsas iniciadas por ano</h3>
+            {% if evolucao_bolsas %}
+            <table>
+                <tr><th>Ano</th><th>Bolsas</th><th style="width:45%;">Proporção</th></tr>
+                {% for b in evolucao_bolsas %}
+                <tr>
+                    <td>{{ b.ano|date:"Y" }}</td>
+                    <td>{{ b.total }}</td>
+                    <td><div style="background:#e6ecf2; border-radius:3px;"><div style="background:#003366; height:14px; width:{{ b.barra }}%; border-radius:3px;"></div></div></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}<p>Sem dados.</p>{% endif %}
+        </div>
+
+        <div>
+            <h3>Evolução temporal — projetos iniciados por ano</h3>
+            {% if evolucao_projetos %}
+            <table>
+                <tr><th>Ano</th><th>Projetos</th><th style="width:45%;">Proporção</th></tr>
+                {% for p in evolucao_projetos %}
+                <tr>
+                    <td>{{ p.ano|date:"Y" }}</td>
+                    <td>{{ p.total }}</td>
+                    <td><div style="background:#e6ecf2; border-radius:3px;"><div style="background:#003366; height:14px; width:{{ p.barra }}%; border-radius:3px;"></div></div></td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}<p>Sem dados.</p>{% endif %}
+        </div>
+    </div>
+
+    <div style="margin-top:20px;">
+        <h3>Taxa de sucesso em editais</h3>
+        <p>
+            <strong>{{ taxa_sucesso_editais }}%</strong> de propostas aprovadas
+            ({{ propostas_aprovadas }} de {{ total_propostas }}).
+        </p>
+        {% if editais_taxas %}
+        <table>
+            <tr><th>Edital</th><th>Título</th><th>Propostas</th><th>Aprovadas</th><th>Taxa</th></tr>
+            {% for e in editais_taxas %}
+            <tr>
+                <td>{{ e.codigo }}</td>
+                <td>{{ e.titulo|truncatechars:60 }}</td>
+                <td>{{ e.total }}</td>
+                <td>{{ e.aprovadas }}</td>
+                <td>{{ e.taxa }}%</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:25px; margin-top:20px;">
+        <div>
+            <h3>Orientados por docente (bolsas ativas)</h3>
+            {% if orientandos %}
+            <table>
+                <tr><th>Docente (coordenador)</th><th>Orientandos</th></tr>
+                {% for o in orientandos %}
+                <tr>
+                    <td>{{ o.projeto__coordenador__nome|default:"Não informado" }}</td>
+                    <td>{{ o.orientandos }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}<p>Sem bolsas ativas.</p>{% endif %}
+        </div>
+
+        <div>
+            <h3>Tempo médio de conclusão de projetos</h3>
+            {% if tempo_medio_dias is not None %}
+                <div class="stats">
+                    <div class="stat"><div class="num">{{ tempo_medio_dias }}</div><div class="label">dias (projetos concluídos)</div></div>
+                </div>
+            {% else %}
+                <p>Nenhum projeto concluído com período registrado.</p>
+            {% endif %}
+
+            <h3 style="margin-top:20px;">Retenção de bolsistas</h3>
+            <p>
+                <strong>{{ taxa_renovacao }}%</strong> de alunos com mais de uma bolsa
+                ({{ alunos_renovaram }} de {{ alunos_com_bolsa }}).
+            </p>
+            <p class="todo" style="color:#8a6d3b; font-size:0.85rem;">
+                ⚙ TODO: taxa de retenção de alunos em IC — definir fórmula oficial
+                (evasão/retensão não possui campo de origem no modelo atual).
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

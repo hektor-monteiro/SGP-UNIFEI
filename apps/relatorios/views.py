@@ -21,6 +21,8 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncYear
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
@@ -28,7 +30,10 @@ from django.views.decorators.http import require_POST
 
 from apps.bolsas.models import Bolsa
 from apps.core.models import Perfil
-from apps.core.permissions import perfil_de, pode_gerir
+from apps.core.permissions import perfil_de, perfil_required, pode_gerir
+from apps.editais.models import Edital
+from apps.equipes.models import MembroEquipe
+from apps.projetos.models import Projeto, Proposta
 
 from .forms import AvaliacaoRelatorioForm, PlanoTrabalhoForm, RelatorioForm
 from .models import PlanoTrabalho, Relatorio
@@ -515,3 +520,142 @@ def avaliar_relatorio(request, pk):
         'relatorio': relatorio,
         'nota_minima': NOTA_MINIMA_RELATORIO,
     })
+
+
+def _barras(itens):
+    """Anexa percentual relativo ao maior total (barras CSS no template)."""
+    itens = list(itens)
+    maior = max((item['total'] for item in itens), default=0)
+    for item in itens:
+        item['barra'] = round(item['total'] * 100 / maior) if maior else 0
+    return itens
+
+
+@never_cache
+@perfil_required(Perfil.PERFIL_TECNICO, Perfil.PERFIL_DIRETOR, Perfil.PERFIL_PROREITOR)
+def indicadores(request):
+    """Painel de indicadores governamentais e de efetividade (§5).
+
+    Indicadores sem fonte de dados no modelo atual ficam marcados com TODO
+    na tela, em vez de exibir estimativas incorretas.
+    """
+    # --- §5.1 Governamentais e de agências de fomento ---
+    bolsas_modalidade = list(
+        Bolsa.objects.values('modalidade__sigla')
+        .annotate(total=Count('id'), ativas=Count('id', filter=Q(status='ativa')))
+        .order_by('-total')
+    )
+    bolsas_fomentador = list(
+        Bolsa.objects.values('fomentador__sigla')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
+    total_projetos = Projeto.objects.count()
+    projetos_concluidos = Projeto.objects.filter(status='concluido').count()
+    taxa_conclusao = (
+        round(projetos_concluidos * 100 / total_projetos, 1) if total_projetos else 0.0
+    )
+    alunos_concluiram = (
+        Bolsa.objects.filter(status='encerrada').values('aluno').distinct().count()
+    )
+    externos_total = MembroEquipe.objects.filter(funcao='externo').count()
+    externos_ativos = MembroEquipe.objects.filter(funcao='externo', ativo=True).count()
+    recursos_internos = (
+        Projeto.objects.aggregate(t=Sum('recursos_internos'))['t'] or Decimal('0')
+    )
+    recursos_externos = (
+        Projeto.objects.aggregate(t=Sum('recursos_externos'))['t'] or Decimal('0')
+    )
+
+    # --- §5.2 Indicadores de efetividade ---
+    evolucao_bolsas = _barras(
+        Bolsa.objects.filter(data_inicio__isnull=False)
+        .annotate(ano=TruncYear('data_inicio'))
+        .values('ano')
+        .annotate(total=Count('id'))
+        .order_by('ano')
+    )
+    evolucao_projetos = _barras(
+        Projeto.objects.filter(data_inicio__isnull=False)
+        .annotate(ano=TruncYear('data_inicio'))
+        .values('ano')
+        .annotate(total=Count('id'))
+        .order_by('ano')
+    )
+
+    total_propostas = Proposta.objects.count()
+    propostas_aprovadas = Proposta.objects.filter(status='aprovada').count()
+    taxa_sucesso_editais = (
+        round(propostas_aprovadas * 100 / total_propostas, 1) if total_propostas else 0.0
+    )
+    editais_taxas = []
+    for edital in (
+        Edital.objects.annotate(
+            total_propostas=Count('propostas'),
+            aprovadas=Count('propostas', filter=Q(propostas__status='aprovada')),
+        )
+        .filter(total_propostas__gt=0)
+        .order_by('-data_inicio')
+    ):
+        editais_taxas.append({
+            'codigo': edital.codigo,
+            'titulo': edital.titulo,
+            'total': edital.total_propostas,
+            'aprovadas': edital.aprovadas,
+            'taxa': round(edital.aprovadas * 100 / edital.total_propostas, 1),
+        })
+
+    duracoes = [
+        (fim - inicio).days
+        for inicio, fim in Projeto.objects.filter(
+            status='concluido',
+            data_inicio__isnull=False,
+            data_termino__isnull=False,
+        ).values_list('data_inicio', 'data_termino')
+    ]
+    tempo_medio_dias = round(sum(duracoes) / len(duracoes)) if duracoes else None
+
+    orientandos = list(
+        Bolsa.objects.filter(status='ativa')
+        .values('projeto__coordenador__nome')
+        .annotate(orientandos=Count('id'))
+        .order_by('-orientandos')[:10]
+    )
+
+    alunos_com_bolsa = Bolsa.objects.values('aluno').distinct().count()
+    alunos_renovaram = (
+        Bolsa.objects.values('aluno').annotate(n=Count('id')).filter(n__gte=2).count()
+    )
+    taxa_renovacao = (
+        round(alunos_renovaram * 100 / alunos_com_bolsa, 1) if alunos_com_bolsa else 0.0
+    )
+
+    contexto = {
+        # KPIs do topo
+        'total_projetos': total_projetos,
+        'total_bolsas_ativas': Bolsa.objects.filter(status='ativa').count(),
+        'total_editais': Edital.objects.count(),
+        'taxa_conclusao': taxa_conclusao,
+        # §5.1
+        'bolsas_modalidade': bolsas_modalidade,
+        'bolsas_fomentador': bolsas_fomentador,
+        'projetos_concluidos': projetos_concluidos,
+        'alunos_concluiram': alunos_concluiram,
+        'externos_total': externos_total,
+        'externos_ativos': externos_ativos,
+        'recursos_internos': recursos_internos,
+        'recursos_externos': recursos_externos,
+        # §5.2
+        'evolucao_bolsas': evolucao_bolsas,
+        'evolucao_projetos': evolucao_projetos,
+        'taxa_sucesso_editais': taxa_sucesso_editais,
+        'total_propostas': total_propostas,
+        'propostas_aprovadas': propostas_aprovadas,
+        'editais_taxas': editais_taxas,
+        'tempo_medio_dias': tempo_medio_dias,
+        'orientandos': orientandos,
+        'taxa_renovacao': taxa_renovacao,
+        'alunos_com_bolsa': alunos_com_bolsa,
+        'alunos_renovaram': alunos_renovaram,
+    }
+    return render(request, 'relatorios/indicadores.html', contexto)
