@@ -114,6 +114,7 @@
                 <a href="{% url 'projetos_lista' %}">Projetos</a>
                 <a href="{% url 'bolsas_lista' %}">Bolsas</a>
                 <a href="{% url 'planos_lista' %}">Planos</a>
+                <a href="{% url 'editais_lista' %}">Editais</a>
                 <span style="color:#9bd;">{{ user.username }}{% if user.perfil %} <span class="badge">{{ user.perfil.get_perfil_display }}</span>{% endif %}</span>
                 <form method="post" action="{% url 'logout' %}" style="display:inline;">
                     {% csrf_token %}

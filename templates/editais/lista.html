@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Editais{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Editais ({{ editais|length }})</h2>
+        {% if pode_gerir %}
+            <a href="{% url 'edital_novo' %}" class="btn">+ Novo edital</a>
+        {% endif %}
+    </div>
+
+    <form method="get" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label style="font-size:0.85rem;">Busca</label>
+            <input type="text" name="q" value="{{ filtros.q }}" placeholder="Título do edital" style="width:220px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem;">Status</label>
+            <select name="status" style="padding:9px; border:1px solid #ccc; border-radius:4px;">
+                <option value="">— Todos —</option>
+                {% for valor, rotulo in status_choices %}
+                    <option value="{{ valor }}" {% if filtros.status == valor %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem;">Modalidade</label>
+            <select name="modalidade" style="padding:9px; border:1px solid #ccc; border-radius:4px;">
+                <option value="">— Todas —</option>
+                {% for mod in modalidades %}
+                    <option value="{{ mod.sigla }}" {% if filtros.modalidade == mod.sigla %}selected{% endif %}>{{ mod.sigla }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn">Filtrar</button>
+        {% if filtros.q or filtros.status or filtros.modalidade %}
+            <a href="{% url 'editais_lista' %}" style="color:#003366;">Limpar</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    {% if editais %}
+        <table>
+            <tr>
+                <th>Código</th>
+                <th>Título</th>
+                <th>Modalidade</th>
+                <th>Período</th>
+                <th>Status</th>
+                <th>Ação</th>
+            </tr>
+            {% for edital in editais %}
+            <tr>
+                <td><a href="{% url 'edital_detalhe' edital.pk %}" style="color:#003366; font-weight:bold;">{{ edital.codigo }}</a></td>
+                <td>{{ edital.titulo|truncatechars:60 }}</td>
+                <td>{{ edital.modalidade.sigla|default:"—" }}</td>
+                <td>{{ edital.data_inicio|date:"d/m/Y" }} — {{ edital.data_fim|date:"d/m/Y" }}</td>
+                <td><span class="badge">{{ edital.get_status_display }}</span></td>
+                <td>
+                    {% if pode_gerir %}
+                        <a href="{% url 'edital_editar' edital.pk %}" style="color:#003366;">Editar</a>
+                    {% else %}
+                        <a href="{% url 'edital_detalhe' edital.pk %}" style="color:#666;">Ver</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Nenhum edital encontrado.</p>
+    {% endif %}
+</div>
+{% endblock %}

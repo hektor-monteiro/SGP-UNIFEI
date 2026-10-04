@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}{{ edital.codigo }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h2 style="margin-bottom:5px;">{{ edital.codigo }}</h2>
+            <p style="font-size:1.05rem;">{{ edital.titulo }}</p>
+        </div>
+        <div style="text-align:right;">
+            <span class="badge">{{ edital.get_status_display }}</span>
+            {% if pode_gerir %}
+                <p style="margin-top:10px;"><a href="{% url 'edital_editar' edital.pk %}" class="btn">Editar</a></p>
+            {% endif %}
+        </div>
+    </div>
+    {% if acoes_disponiveis %}
+        <div style="margin-top:15px; padding-top:15px; border-top:1px solid #eee; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <span style="font-size:0.9rem; color:#666;">Ações do fluxo:</span>
+            {% for acao, rotulo in acoes_disponiveis %}
+                <form method="post" action="{% url 'edital_acao' edital.pk acao %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn">{{ rotulo }}</button>
+                </form>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Informações</h2>
+    <table>
+        <tr><th style="width:220px;">Título</th><td>{{ edital.titulo }}</td></tr>
+        <tr><th>Modalidade</th><td>{{ edital.modalidade|default:"—" }}</td></tr>
+        <tr><th>Início</th><td>{{ edital.data_inicio|date:"d/m/Y" }}</td></tr>
+        <tr><th>Término</th><td>{{ edital.data_fim|date:"d/m/Y" }}</td></tr>
+        <tr><th>Status</th><td><span class="badge">{{ edital.get_status_display }}</span></td></tr>
+        <tr><th>Criado por</th><td>{{ edital.criado_por.username|default:"—" }}</td></tr>
+        {% if edital.validado_por %}
+        <tr><th>Validado por</th><td>{{ edital.validado_por.username }} em {{ edital.data_validacao|date:"d/m/Y H:i" }}</td></tr>
+        {% endif %}
+        {% if edital.descricao %}
+        <tr><th>Descrição</th><td>{{ edital.descricao|linebreaksbr }}</td></tr>
+        {% endif %}
+    </table>
+</div>
+
+<div class="card">
+    <h2>Fluxo do edital</h2>
+    <p style="color:#666;">
+        Rascunho → Publicado (validação do Diretor/Pro-reitor) → Em Andamento → Encerrado
+        <br><small>Qualquer etapa ativa pode ser cancelada. Publicação exige nível Diretor ou superior.</small>
+    </p>
+</div>
+
+<p><a href="{% url 'editais_lista' %}" style="color:#003366;">← Voltar à lista</a></p>
+{% endblock %}
