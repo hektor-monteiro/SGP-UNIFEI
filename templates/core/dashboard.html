@@ -30,6 +30,23 @@
 </div>
 {% endif %}
 
+{% if relatorios_avaliar %}
+<div class="card">
+    <h2>Relatórios a avaliar ({{ relatorios_avaliar|length }})</h2>
+    <table>
+        <tr><th>Relatório</th><th>Aluno</th><th>Bolsa</th><th>Ação</th></tr>
+        {% for rel in relatorios_avaliar %}
+        <tr>
+            <td><a href="{% url 'relatorio_detalhe' rel.pk %}" style="color:#003366; font-weight:bold;">{{ rel.titulo|truncatechars:70 }}</a> ({{ rel.get_tipo_display }})</td>
+            <td>{{ rel.aluno.nome }}</td>
+            <td>{{ rel.bolsa.modalidade.sigla }}</td>
+            <td><a href="{% url 'relatorio_avaliar' rel.pk %}" style="color:#003366;">Realizar avaliação</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+
 {% if mostrar_tudo %}
 <div class="card">
     <h2>Visão geral</h2>
@@ -80,7 +97,26 @@
     {% else %}
         <p>Você ainda não possui plano de trabalho. <a href="{% url 'plano_novo' %}" style="color:#003366;">Criar plano de trabalho</a></p>
     {% endif %}
-    <p style="color:#666; font-size:0.9rem; margin-top:10px;">Aqui serão exibidos relatórios e comprovantes.</p>
+
+    {% if meus_relatorios %}
+        <p style="margin-top:15px;">Seus relatórios:</p>
+        <table>
+            <tr><th>Título</th><th>Tipo</th><th>Bolsa</th><th>Status</th><th>Nota</th></tr>
+            {% for rel in meus_relatorios %}
+            <tr>
+                <td><a href="{% url 'relatorio_detalhe' rel.pk %}" style="color:#003366; font-weight:bold;">{{ rel.titulo }}</a></td>
+                <td>{{ rel.get_tipo_display }}</td>
+                <td>{{ rel.bolsa.modalidade.sigla }}</td>
+                <td><span class="badge">{{ rel.get_status_display }}</span></td>
+                <td>{% if rel.nota is not None %}{{ rel.nota }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p style="margin-top:15px;">Você ainda não possui relatórios. <a href="{% url 'relatorio_novo' %}" style="color:#003366;">Criar relatório</a></p>
+    {% endif %}
+
+    <p style="color:#666; font-size:0.9rem; margin-top:10px;">Aqui serão exibidos comprovantes.</p>
 </div>
 {% endif %}
 {% endblock %}

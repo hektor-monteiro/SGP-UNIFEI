@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}{{ relatorio.titulo }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h2 style="margin-bottom:5px;">{{ relatorio.titulo }}</h2>
+            <p style="font-size:1.05rem;">Relatório {{ relatorio.get_tipo_display|lower }} de {{ relatorio.aluno.nome }} —
+                Bolsa {{ relatorio.bolsa.modalidade.sigla }} no projeto
+                <a href="{% url 'projeto_detalhe' relatorio.bolsa.projeto.pk %}" style="color:#003366;">{{ relatorio.bolsa.projeto.codigo }}</a>
+            </p>
+        </div>
+        <div style="text-align:right;">
+            <span class="badge">{{ relatorio.get_status_display }}</span>
+            {% if pode_editar %}
+                <p style="margin-top:10px;"><a href="{% url 'relatorio_editar' relatorio.pk %}" class="btn">Editar</a></p>
+            {% endif %}
+            {% if pode_avaliar %}
+                <p style="margin-top:10px;"><a href="{% url 'relatorio_avaliar' relatorio.pk %}" class="btn">Avaliar</a></p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if pode_submeter %}
+        <form method="post" action="{% url 'relatorio_submeter' relatorio.pk %}" style="margin-top:15px;">
+            {% csrf_token %}
+            <button type="submit" class="btn">Submeter para avaliação</button>
+            <span style="color:#666; font-size:0.9rem; margin-left:8px;">Após a submissão o conteúdo fica bloqueado até a avaliação.</span>
+        </form>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Vínculos</h2>
+    <table>
+        <tr><th style="width:220px;">Aluno</th><td>{{ relatorio.aluno.nome }} — Matrícula {{ relatorio.aluno.matricula|default:"—" }}</td></tr>
+        <tr><th>Bolsa</th><td><a href="{% url 'bolsa_detalhe' relatorio.bolsa.pk %}" style="color:#003366;">{{ relatorio.bolsa.modalidade.sigla }} ({{ relatorio.bolsa.data_inicio|date:"d/m/Y" }} — {{ relatorio.bolsa.data_fim|date:"d/m/Y" }})</a></td></tr>
+        <tr><th>Projeto do docente</th><td><a href="{% url 'projeto_detalhe' relatorio.bolsa.projeto.pk %}" style="color:#003366;">{{ relatorio.bolsa.projeto.codigo }}</a> — {{ relatorio.bolsa.projeto.titulo }} (Coordenador: {{ relatorio.bolsa.projeto.coordenador.nome|default:"—" }})</td></tr>
+        {% if relatorio.periodo_inicio or relatorio.periodo_fim %}
+            <tr><th>Período</th><td>{{ relatorio.periodo_inicio|date:"d/m/Y"|default:"—" }} — {{ relatorio.periodo_fim|date:"d/m/Y"|default:"—" }}</td></tr>
+        {% endif %}
+        {% if relatorio.data_submissao %}<tr><th>Submetido em</th><td>{{ relatorio.data_submissao|date:"d/m/Y H:i" }}</td></tr>{% endif %}
+    </table>
+</div>
+
+<div class="card">
+    <h2>Conteúdo</h2>
+    {% if relatorio.conteudo %}
+        <p style="white-space:pre-wrap;">{{ relatorio.conteudo|linebreaksbr }}</p>
+    {% else %}
+        <p>—</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Avaliação</h2>
+    {% if relatorio.nota is not None %}
+        <table>
+            <tr><th style="width:220px;">Nota</th><td><strong>{{ relatorio.nota }}</strong> (mínima para aprovação: {{ nota_minima }})</td></tr>
+            <tr><th>Situação</th><td><span class="badge">{{ relatorio.get_status_display }}</span></td></tr>
+            <tr><th>Avaliado por</th><td>{{ relatorio.avaliado_por.nome|default:"—" }}</td></tr>
+            {% if relatorio.data_avaliacao %}<tr><th>Avaliado em</th><td>{{ relatorio.data_avaliacao|date:"d/m/Y H:i" }}</td></tr>{% endif %}
+            {% if relatorio.observacoes %}
+                <tr><th>Observações</th><td>{{ relatorio.observacoes|linebreaksbr }}</td></tr>
+            {% endif %}
+        </table>
+    {% elif relatorio.status == 'submetido' %}
+        <p style="color:#666;">Aguardando avaliação.</p>
+    {% else %}
+        <p style="color:#666;">Avaliação ainda não realizada.</p>
+    {% endif %}
+</div>
+
+<p><a href="{% url 'relatorios_lista' %}" style="color:#003366;">← Voltar à lista</a></p>
+{% endblock %}

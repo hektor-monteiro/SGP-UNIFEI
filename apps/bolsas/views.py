@@ -123,6 +123,7 @@ def detalhe(request, pk):
         'pode_editar': _pode_editar(request.user, bolsa),
         'plano': plano,
         'pode_criar_plano': pode_criar_plano,
+        'relatorios': bolsa.relatorios.all(),
     }
     return render(request, 'bolsas/detalhe.html', contexto)
 

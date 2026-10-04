@@ -43,6 +43,17 @@
                 {% else %}—{% endif %}
             </td>
         </tr>
+        <tr>
+            <th>Relatórios</th>
+            <td>
+                {% if relatorios %}
+                    {% for rel in relatorios %}
+                        <a href="{% url 'relatorio_detalhe' rel.pk %}" style="color:#003366;">{{ rel.get_tipo_display }}</a>
+                        <span class="badge">{{ rel.get_status_display }}</span>{% if rel.nota is not None %} — nota {{ rel.nota }}{% endif %}{% if not forloop.last %} · {% endif %}
+                    {% endfor %}
+                {% else %}—{% endif %}
+            </td>
+        </tr>
     </table>
 </div>
 

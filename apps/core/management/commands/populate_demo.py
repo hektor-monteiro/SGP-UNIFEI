@@ -1,6 +1,7 @@
 import random
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 from apps.core.models import Instituicao, Fomentador, ProcessoSipac
 from apps.projetos.models import Pessoa, Projeto, Proposta
 from apps.bolsas.models import ModalidadeBolsa, Bolsa
@@ -296,19 +297,35 @@ class Command(BaseCommand):
             )
 
     def criar_relatorios(self, bolsas, alunos):
+        """Cria um parcial e um final por bolsa, coerentes com o fluxo:
+        nota/avaliação apenas nos status avaliados; nota na faixa certa
+        (aprovado >= 6,00; reprovado < 6,00)."""
         for bolsa in bolsas:
             for tipo in ['parcial', 'final']:
-                Relatorio.objects.get_or_create(
-                    bolsa=bolsa,
-                    tipo=tipo,
-                    defaults={
-                        'aluno': bolsa.aluno,
-                        'titulo': f'Relatório {tipo.capitalize()} - {bolsa.modalidade.sigla}',
-                        'conteudo': f'Conteúdo do relatório {tipo}...',
-                        'status': random.choice(['rascunho', 'submetido', 'avaliado', 'aprovado']),
-                        'nota': round(random.uniform(7.0, 10.0), 2) if random.random() > 0.5 else None,
-                    }
-                )
+                status = random.choice(['rascunho', 'submetido', 'aprovado', 'reprovado'])
+                avaliado = status in ('aprovado', 'reprovado')
+                if status == 'aprovado':
+                    nota = round(random.uniform(6.0, 10.0), 2)
+                elif status == 'reprovado':
+                    nota = round(random.uniform(3.0, 5.95), 2)
+                else:
+                    nota = None
+                agora = timezone.now()
+                # Só cria se ainda não existir (parciais podem se repetir na base)
+                if not Relatorio.objects.filter(bolsa=bolsa, tipo=tipo).exists():
+                    Relatorio.objects.create(
+                        bolsa=bolsa,
+                        tipo=tipo,
+                        aluno=bolsa.aluno,
+                        titulo=f'Relatório {tipo.capitalize()} - {bolsa.modalidade.sigla}',
+                        conteudo=f'Conteúdo do relatório {tipo}...',
+                        status=status,
+                        nota=nota,
+                        observacoes='Avaliação de demonstração.' if avaliado else '',
+                        avaliado_por=bolsa.projeto.coordenador if avaliado else None,
+                        data_avaliacao=agora if avaliado else None,
+                        data_submissao=agora if status != 'rascunho' else None,
+                    )
 
     def criar_editais(self, modalidades):
         editais = []

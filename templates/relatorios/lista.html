@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Relatórios ({{ relatorios|length }})</h2>
+        {% if pode_criar %}
+            <a href="{% url 'relatorio_novo' %}" class="btn">+ Novo relatório</a>
+        {% endif %}
+    </div>
+
+    <form method="get" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label style="font-size:0.85rem;">Busca</label>
+            <input type="text" name="q" value="{{ filtros.q }}" placeholder="Título do relatório" style="width:220px;">
+        </div>
+        <div>
+            <label style="font-size:0.85rem;">Tipo</label>
+            <select name="tipo" style="padding:9px; border:1px solid #ccc; border-radius:4px;">
+                <option value="">— Todos —</option>
+                {% for valor, rotulo in tipo_choices %}
+                    <option value="{{ valor }}" {% if filtros.tipo == valor %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.85rem;">Status</label>
+            <select name="status" style="padding:9px; border:1px solid #ccc; border-radius:4px;">
+                <option value="">— Todos —</option>
+                {% for valor, rotulo in status_choices %}
+                    <option value="{{ valor }}" {% if filtros.status == valor %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn">Filtrar</button>
+        {% if filtros.q or filtros.status or filtros.tipo %}
+            <a href="{% url 'relatorios_lista' %}" style="color:#003366;">Limpar</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    {% if relatorios %}
+        <table>
+            <tr>
+                <th>Título</th>
+                <th>Tipo</th>
+                <th>Aluno</th>
+                <th>Bolsa</th>
+                <th>Status</th>
+                <th>Nota</th>
+                <th>Ação</th>
+            </tr>
+            {% for rel in relatorios %}
+            <tr>
+                <td><a href="{% url 'relatorio_detalhe' rel.pk %}" style="color:#003366; font-weight:bold;">{{ rel.titulo }}</a></td>
+                <td>{{ rel.get_tipo_display }}</td>
+                <td>{{ rel.aluno.nome }}</td>
+                <td>{{ rel.bolsa.modalidade.sigla }}</td>
+                <td><span class="badge">{{ rel.get_status_display }}</span></td>
+                <td>{% if rel.nota is not None %}{{ rel.nota }}{% else %}—{% endif %}</td>
+                <td>
+                    {% if pode_gerir or rel.pk in editaveis %}
+                        <a href="{% url 'relatorio_editar' rel.pk %}" style="color:#003366; margin-right:8px;">Editar</a>
+                    {% endif %}
+                    {% if rel.pk in avaliaveis %}
+                        <a href="{% url 'relatorio_avaliar' rel.pk %}" style="color:#003366;">Avaliar</a>
+                    {% elif not pode_gerir and rel.pk not in editaveis %}
+                        <a href="{% url 'relatorio_detalhe' rel.pk %}" style="color:#666;">Ver</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Nenhum relatório encontrado.</p>
+    {% endif %}
+</div>
+{% endblock %}

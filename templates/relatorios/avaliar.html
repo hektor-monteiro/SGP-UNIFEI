@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Avaliação de relatório{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h2 style="margin-bottom:5px;">Avaliação de relatório</h2>
+            <p style="margin:0;">
+                <strong>{{ relatorio.titulo }}</strong> —
+                relatório {{ relatorio.get_tipo_display|lower }} de {{ relatorio.aluno.nome }}
+            </p>
+            <p style="color:#666; margin:5px 0 0;">
+                Bolsa <a href="{% url 'bolsa_detalhe' relatorio.bolsa.pk %}" style="color:#003366;">{{ relatorio.bolsa.modalidade.sigla }}</a>
+                {% if relatorio.data_submissao %} — submetido em {{ relatorio.data_submissao|date:"d/m/Y H:i" }}{% endif %}
+            </p>
+        </div>
+        <div style="text-align:right;">
+            <span class="badge">{{ relatorio.get_status_display }}</span>
+        </div>
+    </div>
+    <p style="margin-top:10px;">
+        Nota mínima para aprovação automática: <strong>{{ nota_minima }}</strong>
+        (igual ou acima → Aprovado; abaixo → Reprovado).
+    </p>
+</div>
+
+<div class="card">
+    <h2>Notas (0 a 10)</h2>
+
+    {% if form.non_field_errors %}
+        <div class="alert-error">
+            {% for erro in form.non_field_errors %}<p>{{ erro }}</p>{% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+            <p>
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <span style="color:#b71c1c; font-size:0.85rem;">{{ field.errors|first }}</span>
+                {% endif %}
+            </p>
+        {% endfor %}
+        <button type="submit" class="btn">Concluir avaliação</button>
+        <a href="{% url 'relatorio_detalhe' relatorio.pk %}" style="color:#003366; margin-left:15px;">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

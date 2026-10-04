@@ -5,7 +5,7 @@ from django.views.decorators.cache import never_cache
 from apps.projetos.models import Projeto, Pessoa
 from apps.bolsas.models import Bolsa
 from apps.editais.models import Edital, Avaliacao
-from apps.relatorios.models import PlanoTrabalho
+from apps.relatorios.models import PlanoTrabalho, Relatorio
 
 
 def index(request):
@@ -20,6 +20,18 @@ def index(request):
 def dashboard(request):
     """Painel do usuário autenticado com resumo de dados conforme seu perfil."""
     perfil = getattr(request.user, 'perfil', None)
+
+    # Relatórios submetidos que o usuário pode avaliar:
+    # técnico+ (ou superusuário): todos; docente: os de seus orientandos.
+    relatorios_avaliar = Relatorio.objects.none()
+    if request.user.is_superuser or (perfil and perfil.pelo_menos('tecnico')):
+        relatorios_avaliar = Relatorio.objects.filter(status='submetido')
+    elif perfil and perfil.perfil == 'docente' and perfil.pessoa:
+        relatorios_avaliar = Relatorio.objects.filter(
+            status='submetido',
+            bolsa__projeto__coordenador=perfil.pessoa,
+        )
+
     contexto = {
         'perfil': perfil,
         'e_superuser': request.user.is_superuser,
@@ -30,6 +42,9 @@ def dashboard(request):
                 status='alocada',
                 tipo='proposta',
             ).select_related('proposta__edital')
+        ),
+        'relatorios_avaliar': relatorios_avaliar.select_related(
+            'aluno', 'bolsa__modalidade',
         ),
     }
 
@@ -56,11 +71,19 @@ def dashboard(request):
             'mostrar_meus_projetos': True,
         })
     else:
-        # Aluno: vê seus planos de trabalho; relatórios e comprovantes depois
+        # Aluno: vê seus planos e relatórios; comprovantes depois
         planos = (
             PlanoTrabalho.objects.filter(aluno=perfil.pessoa).select_related('bolsa__modalidade')
             if perfil and perfil.pessoa else PlanoTrabalho.objects.none()
         )
-        contexto.update({'mostrar_aluno': True, 'meus_planos': planos})
+        relatorios = (
+            Relatorio.objects.filter(aluno=perfil.pessoa).select_related('bolsa__modalidade')
+            if perfil and perfil.pessoa else Relatorio.objects.none()
+        )
+        contexto.update({
+            'mostrar_aluno': True,
+            'meus_planos': planos,
+            'meus_relatorios': relatorios,
+        })
 
     return render(request, 'core/dashboard.html', contexto)
