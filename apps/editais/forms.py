@@ -2,6 +2,7 @@
 from django import forms
 
 from apps.bolsas.models import ModalidadeBolsa
+from apps.projetos.models import Proposta
 
 from .models import Edital
 
@@ -38,3 +39,21 @@ class EditalForm(forms.ModelForm):
                 'A data de término deve ser posterior à data de início.'
             )
         return cleaned
+
+
+class PropostaForm(forms.ModelForm):
+    """Formulário de submissão de proposta a um edital.
+
+    `edital`, `submetido_por` e `status` são definidos pela view.
+    """
+
+    class Meta:
+        model = Proposta
+        fields = ['titulo', 'resumo']
+        widgets = {
+            'resumo': forms.Textarea(attrs={'rows': 6}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['resumo'].required = False

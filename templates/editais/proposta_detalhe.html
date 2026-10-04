@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}{{ proposta.titulo|truncatechars:40 }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h2 style="margin-bottom:5px;">{{ proposta.titulo }}</h2>
+            <p style="color:#666; margin:0;">Submetida por {{ proposta.submetido_por.nome }} em {{ proposta.data_submissao|date:"d/m/Y H:i" }}</p>
+        </div>
+        <div style="text-align:right;">
+            <span class="badge">{{ proposta.get_status_display }}</span>
+            {% if pode_editar %}
+                <p style="margin-top:10px;"><a href="{% url 'proposta_editar' proposta.pk %}" class="btn">Editar</a></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Informações</h2>
+    <table>
+        {% if proposta.edital %}
+        <tr>
+            <th style="width:220px;">Edital</th>
+            <td><a href="{% url 'edital_detalhe' proposta.edital.pk %}" style="color:#003366;">{{ proposta.edital.codigo }} — {{ proposta.edital.titulo }}</a></td>
+        </tr>
+        {% endif %}
+        <tr><th>Submetido por</th><td>{{ proposta.submetido_por.nome }}</td></tr>
+        <tr><th>Data da submissão</th><td>{{ proposta.data_submissao|date:"d/m/Y H:i" }}</td></tr>
+        <tr><th>Status</th><td><span class="badge">{{ proposta.get_status_display }}</span></td></tr>
+        {% if proposta.nota_final %}
+        <tr><th>Nota final</th><td>{{ proposta.nota_final }}</td></tr>
+        {% endif %}
+        {% if proposta.resumo %}
+        <tr><th>Resumo</th><td>{{ proposta.resumo|linebreaksbr }}</td></tr>
+        {% endif %}
+    </table>
+</div>
+
+<p>
+    {% if proposta.edital %}
+        <a href="{% url 'edital_detalhe' proposta.edital.pk %}" style="color:#003366;">← Voltar ao edital</a>
+    {% else %}
+        <a href="{% url 'editais_lista' %}" style="color:#003366;">← Voltar aos editais</a>
+    {% endif %}
+</p>
+{% endblock %}

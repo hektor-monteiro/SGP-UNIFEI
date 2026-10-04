@@ -328,6 +328,7 @@ class Command(BaseCommand):
                     titulo=f'Proposta para {edital.codigo} - {random.randint(1, 100)}',
                     defaults={
                         'resumo': 'Resumo da proposta de pesquisa...',
+                        'edital': edital,
                         'submetido_por': random.choice(docentes),
                         'status': random.choice(['submetida', 'em_avaliacao', 'aprovada', 'reprovada']),
                         'nota_final': round(random.uniform(6.0, 10.0), 2) if random.random() > 0.5 else None,

@@ -48,6 +48,35 @@
 </div>
 
 <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">{% if pode_gerir %}Propostas{% else %}Minhas propostas{% endif %} ({{ propostas|length }})</h2>
+        {% if pode_submeter and aceita_submissoes %}
+            <a href="{% url 'proposta_nova' edital.pk %}" class="btn">+ Submeter proposta</a>
+        {% endif %}
+    </div>
+    {% if propostas %}
+    <table style="margin-top:15px;">
+        <tr>
+            <th>Título</th>
+            <th>Submetido por</th>
+            <th>Data</th>
+            <th>Status</th>
+        </tr>
+        {% for proposta in propostas %}
+        <tr>
+            <td><a href="{% url 'proposta_detalhe' proposta.pk %}" style="color:#003366;">{{ proposta.titulo|truncatechars:60 }}</a></td>
+            <td>{{ proposta.submetido_por.nome }}</td>
+            <td>{{ proposta.data_submissao|date:"d/m/Y" }}</td>
+            <td><span class="badge">{{ proposta.get_status_display }}</span></td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+        <p style="margin-top:10px;">Nenhuma proposta{% if not pode_gerir %} sua{% endif %} submetida até o momento.</p>
+    {% endif %}
+</div>
+
+<div class="card">
     <h2>Fluxo do edital</h2>
     <p style="color:#666;">
         Rascunho → Publicado (validação do Diretor/Pro-reitor) → Em Andamento → Encerrado
