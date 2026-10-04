@@ -177,3 +177,77 @@ class LogAuditoria(TimeStampedModel):
     def __str__(self):
         quem = self.usuario.username if self.usuario else 'anônimo'
         return f'{self.get_acao_display()} — {quem} — {self.caminho}'
+
+
+class SolicitacaoLGPD(TimeStampedModel):
+    """Solicitação de titular de dados (§6): correção ou exclusão/anonimização.
+
+    O titular abre a solicitação; técnicos+ (encarregado/DPO) tratam,
+    podendo concluir a exclusão executando a anonimização dos dados
+    pessoais, preservando os registros de pesquisa e prestação de contas.
+    """
+    TIPO_CORRECAO = 'correcao'
+    TIPO_EXCLUSAO = 'exclusao'
+    TIPOS = [
+        (TIPO_CORRECAO, 'Correção de dados'),
+        (TIPO_EXCLUSAO, 'Exclusão (anonimização)'),
+    ]
+
+    STATUS_ABERTA = 'aberta'
+    STATUS_EM_ANALISE = 'em_analise'
+    STATUS_CONCLUIDA = 'concluida'
+    STATUS_INDEFERIDA = 'indeferida'
+    STATUS = [
+        (STATUS_ABERTA, 'Aberta'),
+        (STATUS_EM_ANALISE, 'Em análise'),
+        (STATUS_CONCLUIDA, 'Concluída'),
+        (STATUS_INDEFERIDA, 'Indeferida'),
+    ]
+    STATUS_FINAL = (STATUS_CONCLUIDA, STATUS_INDEFERIDA)
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    titular = models.ForeignKey(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='solicitacoes_lgpd',
+        verbose_name='Titular',
+    )
+    tipo = models.CharField(max_length=10, choices=TIPOS)
+    descricao = models.TextField(
+        verbose_name='Descrição',
+        help_text='Que dados devem ser corrigidos ou por que solicita a exclusão.',
+    )
+    status = models.CharField(
+        max_length=10, choices=STATUS, default=STATUS_ABERTA,
+    )
+    justificativa = models.TextField(
+        blank=True,
+        verbose_name='Justificativa do encarregado',
+    )
+    tratado_por = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='solicitacoes_lgpd_tratadas',
+        verbose_name='Tratada por',
+    )
+    tratado_em = models.DateTimeField(
+        null=True, blank=True, verbose_name='Tratada em',
+    )
+
+    class Meta:
+        verbose_name = 'Solicitação LGPD'
+        verbose_name_plural = 'Solicitações LGPD'
+        ordering = ['-criado_em']
+
+    def __str__(self):
+        return (
+            f'{self.get_tipo_display()} — {self.titular.username} '
+            f'({self.get_status_display()})'
+        )
+
+    @property
+    def esta_final(self) -> bool:
+        """True quando a solicitação já foi concluída ou indeferida."""
+        return self.status in self.STATUS_FINAL

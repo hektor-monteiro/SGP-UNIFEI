@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitações LGPD{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Solicitações LGPD</h2>
+    <p style="color:#666;">
+        {% if gerente %}
+            Visão do encarregado (DPO): todas as solicitações de correção e
+            exclusão/anonimização abertas pelos titulares (§6).
+        {% else %}
+            Suas solicitações de correção e exclusão/anonimização de dados
+            pessoais (§6).
+        {% endif %}
+    </p>
+
+    {% if not gerente %}
+        <p>
+            <a class="btn" href="{% url 'lgpd_solicitacao_nova' %}">Nova solicitação</a>
+            <a href="{% url 'lgpd' %}" style="color:#003366; margin-left:12px;">Voltar</a>
+        </p>
+    {% else %}
+        <form method="get" style="margin-bottom:12px; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+            <span>
+                <label for="id_status">Status</label><br>
+                <select name="status" id="id_status">
+                    <option value="">— todos —</option>
+                    {% for valor, rotulo in status_opcoes %}
+                        <option value="{{ valor }}" {% if filtros.status == valor %}selected{% endif %}>{{ rotulo }}</option>
+                    {% endfor %}
+                </select>
+            </span>
+            <span>
+                <label for="id_tipo">Tipo</label><br>
+                <select name="tipo" id="id_tipo">
+                    <option value="">— todos —</option>
+                    {% for valor, rotulo in tipo_opcoes %}
+                        <option value="{{ valor }}" {% if filtros.tipo == valor %}selected{% endif %}>{{ rotulo }}</option>
+                    {% endfor %}
+                </select>
+            </span>
+            <button type="submit" class="btn">Filtrar</button>
+            {% if filtros.status or filtros.tipo %}
+                <a href="{% url 'lgpd_solicitacoes' %}" style="color:#003366;">Limpar filtros</a>
+            {% endif %}
+        </form>
+    {% endif %}
+
+    {% if solicitacoes %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Aberta em</th>
+                    {% if gerente %}<th>Titular</th>{% endif %}
+                    <th>Tipo</th>
+                    <th>Descrição</th>
+                    <th>Situação</th>
+                    <th>Tratada em</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sol in solicitacoes %}
+                <tr>
+                    <td>{{ sol.criado_em|date:"d/m/Y H:i" }}</td>
+                    {% if gerente %}<td>{{ sol.titular.username }}</td>{% endif %}
+                    <td><span class="badge">{{ sol.get_tipo_display }}</span></td>
+                    <td>{{ sol.descricao|truncatechars:60 }}</td>
+                    <td><span class="badge">{{ sol.get_status_display }}</span></td>
+                    <td>{{ sol.tratado_em|date:"d/m/Y H:i"|default:"—" }}</td>
+                    <td><a href="{% url 'lgpd_solicitacao_detalhe' sol.pk %}">Ver</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="color:#666;">Nenhuma solicitação{% if filtros.status or filtros.tipo %} com estes filtros{% endif %}.</p>
+    {% endif %}
+</div>
+{% endblock %}

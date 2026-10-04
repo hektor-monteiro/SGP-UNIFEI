@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitação LGPD{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:750px;">
+    <h2>Solicitação LGPD</h2>
+
+    <table>
+        <tr><th>Tipo</th><td><span class="badge">{{ solicitacao.get_tipo_display }}</span></td></tr>
+        <tr><th>Situação</th><td><span class="badge">{{ solicitacao.get_status_display }}</span></td></tr>
+        {% if gerente %}
+            <tr><th>Titular</th><td>{{ solicitacao.titular.username }}</td></tr>
+        {% endif %}
+        <tr><th>Aberta em</th><td>{{ solicitacao.criado_em|date:"d/m/Y H:i" }}</td></tr>
+        {% if solicitacao.tratado_em %}
+            <tr>
+                <th>Tratada em</th>
+                <td>
+                    {{ solicitacao.tratado_em|date:"d/m/Y H:i" }}
+                    {% if solicitacao.tratado_por %}por {{ solicitacao.tratado_por.username }}{% endif %}
+                </td>
+            </tr>
+        {% endif %}
+    </table>
+
+    <h3 style="margin-top:16px;">Descrição do titular</h3>
+    <p style="white-space:pre-wrap;">{{ solicitacao.descricao }}</p>
+
+    {% if solicitacao.justificativa %}
+        <h3 style="margin-top:16px;">Resposta do encarregado</h3>
+        <p style="white-space:pre-wrap;">{{ solicitacao.justificativa }}</p>
+    {% endif %}
+</div>
+
+{% if tratar_form %}
+<div class="card" style="max-width:750px;">
+    <h3>Tratamento (encarregado)</h3>
+
+    {% if solicitacao.tipo == 'exclusao' %}
+        <p style="color:#666; font-size:0.9rem;">
+            Ao concluir uma exclusão, os dados pessoais do titular são
+            <strong>anonimizados de forma irreversível</strong> e a senha é
+            invalidada. Os registros de pesquisa e auditoria são preservados.
+        </p>
+        {% if bloqueios %}
+            <div class="alert-error">
+                <p><strong>Vínculos ativos (impedem a conclusão):</strong></p>
+                <ul>
+                    {% for b in bloqueios %}<li>{{ b }}</li>{% endfor %}
+                </ul>
+                <p style="font-size:0.85rem;">
+                    Resolva os vínculos ou indefira a solicitação
+                    (art. 16 da LGPD — dados necessários às finalidades).
+                </p>
+            </div>
+        {% else %}
+            <p style="color:#2e7d32; font-size:0.9rem;">
+                ✓ Nenhum vínculo ativo — a anonimização pode ser concluída.
+            </p>
+        {% endif %}
+    {% endif %}
+
+    <form method="post" action="{% url 'lgpd_solicitacao_tratar' solicitacao.pk %}">
+        {% csrf_token %}
+        {% if tratar_form.non_field_errors %}
+            <div class="alert-error">
+                {% for erro in tratar_form.non_field_errors %}<p>{{ erro }}</p>{% endfor %}
+            </div>
+        {% endif %}
+        {% for field in tratar_form %}
+            <p>
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <span style="color:#b71c1c; font-size:0.85rem;">{{ field.errors|first }}</span>
+                {% endif %}
+            </p>
+        {% endfor %}
+        <button type="submit" class="btn">Salvar tratamento</button>
+    </form>
+</div>
+{% endif %}
+
+<p>
+    <a href="{% url 'lgpd_solicitacoes' %}" style="color:#003366;">← Voltar para minhas solicitações</a>
+</p>
+{% endblock %}

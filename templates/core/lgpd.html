@@ -17,7 +17,14 @@
             <p>
                 ✅ Consentimento registrado em
                 <strong>{{ perfil.data_consentimento|date:"d/m/Y H:i" }}</strong>.
+                Você pode revogá-lo a qualquer momento (art. 8º, §5º).
             </p>
+            <form method="post" action="{% url 'lgpd_revogar_consentimento' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn" style="background:#b71c1c;">
+                    Revogar consentimento
+                </button>
+            </form>
         {% else %}
             <p>Você ainda não registrou seu consentimento.</p>
             <form method="post" action="{% url 'lgpd_consentimento' %}">
@@ -51,13 +58,15 @@
     <ul>
         <li><strong>Acesso e portabilidade:</strong> baixe seus dados no botão acima.</li>
         <li>
-            <strong>Correção:</strong> solicite a correção de dados incompletos,
-            inexatos ou desatualizados ao encarregado (DPO) ou à DIP.
+            <strong>Correção:</strong> abra uma solicitação de correção
+            descrevendo o dado incorreto — o encarregado analisa e responde.
         </li>
         <li>
-            <strong>Exclusão:</strong> os dados pessoais podem ser anonimizados
-            quando já não forem necessários às finalidades do sistema,
-            preservando os registros de pesquisa e prestação de contas.
+            <strong>Exclusão:</strong> abra uma solicitação de exclusão.
+            Quando não houver vínculos ativos (bolsa, projeto, plano ou
+            relatório em andamento), seus dados pessoais são
+            <strong>anonimizados</strong>, preservando os registros de
+            pesquisa e prestação de contas (art. 16 da LGPD).
         </li>
         <li>
             <strong>Informação sobre compartilhamento:</strong> os dados são
@@ -65,10 +74,13 @@
             direção.
         </li>
     </ul>
-    <p class="todo" style="color:#8a6d3b; font-size:0.85rem;">
-        ⚙ TODO: fluxo automatizado de solicitação de correção/exclusão
-        (hoje a solicitação é feita ao encarregado).
-    </p>
+    {% if perfil %}
+        <p>
+            <a class="btn" href="{% url 'lgpd_solicitacoes' %}">
+                Minhas solicitações
+            </a>
+        </p>
+    {% endif %}
 </div>
 
 <div class="card">

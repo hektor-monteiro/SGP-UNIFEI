@@ -1,7 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
-from .models import Instituicao, Fomentador, ProcessoSipac, Perfil, LogAuditoria
+from .models import (
+    Instituicao, Fomentador, ProcessoSipac, Perfil, LogAuditoria,
+    SolicitacaoLGPD,
+)
 
 @admin.register(Instituicao)
 class InstituicaoAdmin(admin.ModelAdmin):
@@ -62,3 +65,13 @@ class LogAuditoriaAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """Logs são preservados para auditoria."""
         return False
+
+
+@admin.register(SolicitacaoLGPD)
+class SolicitacaoLGPDAdmin(admin.ModelAdmin):
+    """Solicitações de titular (§6) — gerenciadas pelo encarregado."""
+    list_display = ('criado_em', 'titular', 'tipo', 'status', 'tratado_por', 'tratado_em')
+    list_filter = ('tipo', 'status')
+    search_fields = ('titular__username', 'descricao', 'justificativa')
+    raw_id_fields = ('titular', 'tratado_por')
+    readonly_fields = ('criado_em', 'atualizado_em', 'tratado_em')

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:750px;">
+    <h2>{{ titulo }}</h2>
+    <p style="color:#666; font-size:0.9rem;">
+        Descreva o que precisa ser corrigido ou por que solicita a
+        exclusão/anonimização dos seus dados. O encarregado (DIP) irá
+        analisar e responder.
+    </p>
+
+    {% if form.non_field_errors %}
+        <div class="alert-error">
+            {% for erro in form.non_field_errors %}<p>{{ erro }}</p>{% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+            <p>
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <span style="color:#b71c1c; font-size:0.85rem;">{{ field.errors|first }}</span>
+                {% endif %}
+                {% if field.help_text %}
+                    <span style="color:#666; font-size:0.8rem;">{{ field.help_text }}</span>
+                {% endif %}
+            </p>
+        {% endfor %}
+        <button type="submit" class="btn">Enviar solicitação</button>
+        <a href="{% url 'lgpd_solicitacoes' %}" style="color:#003366; margin-left:15px;">Cancelar</a>
+    </form>
+
+    <p style="color:#666; font-size:0.85rem; margin-top:15px;">
+        A exclusão é tratada como <strong>anonimização</strong>: seus dados
+        de identificação são removidos, mas os registros de pesquisa e
+        prestação de contas são preservados (§6 e art. 16 da LGPD).
+    </p>
+</div>
+{% endblock %}

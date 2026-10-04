@@ -15,5 +15,26 @@ urlpatterns = [
     path('lgpd/', views.lgpd_pagina, name='lgpd'),
     path('lgpd/meus-dados/', views.lgpd_meus_dados, name='lgpd_meus_dados'),
     path('lgpd/consentimento/', views.lgpd_consentimento, name='lgpd_consentimento'),
+    path(
+        'lgpd/consentimento/revogar/',
+        views.lgpd_revogar_consentimento,
+        name='lgpd_revogar_consentimento',
+    ),
+    path('lgpd/solicitacoes/', views.solicitacoes_lista, name='lgpd_solicitacoes'),
+    path(
+        'lgpd/solicitacoes/nova/',
+        views.solicitacao_nova,
+        name='lgpd_solicitacao_nova',
+    ),
+    path(
+        'lgpd/solicitacoes/<uuid:pk>/',
+        views.solicitacao_detalhe,
+        name='lgpd_solicitacao_detalhe',
+    ),
+    path(
+        'lgpd/solicitacoes/<uuid:pk>/tratar/',
+        views.solicitacao_tratar,
+        name='lgpd_solicitacao_tratar',
+    ),
     path('lgpd/auditoria/', views.auditoria, name='auditoria'),
 ]
