@@ -6,3 +6,7 @@ db.sqlite3
 docs
 setup.sh
 AGENTS.md
+dist
+logs
+*.zip
+*.tar.gz

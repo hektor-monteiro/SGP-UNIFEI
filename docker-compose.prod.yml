@@ -1,0 +1,53 @@
+# SGP-UNIFEI — Compose de produção/avaliação
+#
+# Sobe o sistema a partir da imagem pronta (gerada por gerar_instalador.sh),
+# com DEBUG=False, migrações e dados de demonstração via entrypoint.
+#
+# Variáveis opcionais (ex.: APP_PORT=8100 docker compose ... up -d):
+#   APP_PORT      porta HTTP           (padrão 8000)
+#   DB_PORT       porta do PostgreSQL  (padrão 5433)
+#   BIND          IP de publicação     (padrão 127.0.0.1; use 0.0.0.0 na LAN)
+#   ADMIN_PASSWORD senha do admin       (padrão admin123)
+#   SEED_DEMO     popular dados demo   (padrão 1)
+services:
+  app:
+    image: sgp-unifei:${SGP_VERSION:-1.0}
+    ports:
+      - "${BIND:-127.0.0.1}:${APP_PORT:-8000}:8000"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-chave-avaliacao-sgp-unifei-2026-mude-antes-de-publicar}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-sgp}
+      - DB_USER=${DB_USER:-sgp}
+      - DB_PASSWORD=${DB_PASSWORD:-sgp}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - SEED_DEMO=${SEED_DEMO:-1}
+    entrypoint: ["/app/docker/entrypoint-prod.sh"]
+    command: gunicorn sgp.config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --access-logfile -
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=${DB_NAME:-sgp}
+      - POSTGRES_USER=${DB_USER:-sgp}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-sgp}
+    ports:
+      - "${BIND:-127.0.0.1}:${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sgp -d sgp"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
