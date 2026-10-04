@@ -237,3 +237,50 @@ class RegraNegocioBolsaTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'escolha válida')
         self.assertFalse(Bolsa.objects.exists())
+
+
+class ModalidadeTests(TestCase):
+    """Gestão de modalidades: apenas técnico+ (requisito §3.2, não hardcoded)."""
+
+    def setUp(self):
+        _criar_usuario('alu_mod', Perfil.PERFIL_ALUNO)
+        _criar_usuario('doc_mod', Perfil.PERFIL_DOCENTE)
+        _criar_usuario('tec_mod', Perfil.PERFIL_TECNICO)
+
+    def test_aluno_e_docente_bloqueados(self):
+        for username in ('alu_mod', 'doc_mod'):
+            self.client.login(username=username, password='x')
+            self.assertEqual(
+                self.client.get(reverse('modalidades_lista')).status_code, 403,
+            )
+            self.client.logout()
+
+    def test_tecnico_lista_modalidades(self):
+        self.client.login(username='tec_mod', password='x')
+        response = self.client.get(reverse('modalidades_lista'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '+ Nova modalidade')
+
+    def test_tecnico_cria_modalidade(self):
+        self.client.login(username='tec_mod', password='x')
+        response = self.client.post(reverse('modalidade_nova'), {
+            'sigla': 'PIBITI',
+            'nome': 'Tecnologia da Informação',
+            'descricao': '',
+            'ativo': 'on',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(ModalidadeBolsa.objects.filter(sigla='PIBITI').exists())
+
+    def test_modalidade_nova_aparece_no_form_de_bolsa(self):
+        """Modalidade criada pelo técnico fica disponível sem mudar código."""
+        self.client.login(username='tec_mod', password='x')
+        self.client.post(reverse('modalidade_nova'), {
+            'sigla': 'PIVIC',
+            'nome': 'Voluntária',
+            'descricao': '',
+            'ativo': 'on',
+        })
+        response = self.client.get(reverse('bolsa_nova'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'PIVIC')

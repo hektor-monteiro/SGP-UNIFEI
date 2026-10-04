@@ -6,9 +6,14 @@
 <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <h2 style="margin:0;">Bolsas ({{ bolsas|length }})</h2>
-        {% if pode_criar %}
-            <a href="{% url 'bolsa_nova' %}" class="btn">+ Nova bolsa</a>
-        {% endif %}
+        <div style="display:flex; gap:15px; align-items:center;">
+            {% if pode_gerir %}
+                <a href="{% url 'modalidades_lista' %}" style="color:#003366;">Gerenciar modalidades</a>
+            {% endif %}
+            {% if pode_criar %}
+                <a href="{% url 'bolsa_nova' %}" class="btn">+ Nova bolsa</a>
+            {% endif %}
+        </div>
     </div>
 
     <form method="get" style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">

@@ -7,6 +7,15 @@ from apps.projetos.models import Pessoa
 from .models import Bolsa, ModalidadeBolsa
 
 
+class ModalidadeBolsaForm(forms.ModelForm):
+    """Cadastro de modalidade de bolsa (configurável pelo técnico, §3.2)."""
+
+    class Meta:
+        model = ModalidadeBolsa
+        fields = ['sigla', 'nome', 'descricao', 'ativo']
+        widgets = {'descricao': forms.Textarea(attrs={'rows': 3})}
+
+
 class BolsaForm(forms.ModelForm):
     """Formulário de criação/edição de bolsa.
 

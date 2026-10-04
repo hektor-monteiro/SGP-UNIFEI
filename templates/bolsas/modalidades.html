@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Modalidades de Bolsa{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Modalidades de Bolsa ({{ modalidades|length }})</h2>
+        <a href="{% url 'modalidade_nova' %}" class="btn">+ Nova modalidade</a>
+    </div>
+</div>
+
+<div class="card">
+    {% if modalidades %}
+        <table>
+            <tr>
+                <th>Sigla</th>
+                <th>Nome</th>
+                <th>Bolsas vinculadas</th>
+                <th>Ativa</th>
+                <th>Ação</th>
+            </tr>
+            {% for modalidade in modalidades %}
+            <tr>
+                <td style="font-weight:bold;">{{ modalidade.sigla }}</td>
+                <td>{{ modalidade.nome }}</td>
+                <td>{{ modalidade.total_bolsas }}</td>
+                <td>{% if modalidade.ativo %}Sim{% else %}<span style="color:#b71c1c;">Não</span>{% endif %}</td>
+                <td><a href="{% url 'modalidade_editar' modalidade.pk %}" style="color:#003366;">Editar</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Nenhuma modalidade cadastrada.</p>
+    {% endif %}
+</div>
+
+<p><a href="{% url 'bolsas_lista' %}" style="color:#003366;">← Voltar às bolsas</a></p>
+{% endblock %}

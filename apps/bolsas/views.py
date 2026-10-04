@@ -8,14 +8,15 @@ Regras de acesso:
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 
 from apps.core.models import Perfil
-from apps.core.permissions import perfil_de, pode_criar, pode_gerir
+from apps.core.permissions import perfil_de, perfil_required, pode_criar, pode_gerir
 from apps.projetos.models import Projeto
 
-from .forms import BolsaForm
+from .forms import BolsaForm, ModalidadeBolsaForm
 from .models import Bolsa, ModalidadeBolsa
 
 
@@ -160,4 +161,58 @@ def editar(request, pk):
     return render(request, 'bolsas/form.html', {
         'form': form,
         'titulo': f'Editar bolsa de {bolsa.aluno.nome}',
+    })
+
+
+# --------------------------------------------------------------------------
+# Modalidades de bolsa (configuração pelo técnico — requisito §3.2)
+# --------------------------------------------------------------------------
+
+@perfil_required(Perfil.PERFIL_TECNICO, Perfil.PERFIL_DIRETOR, Perfil.PERFIL_PROREITOR)
+@never_cache
+def modalidade_lista(request):
+    """Lista de modalidades com nº de bolsas vinculadas (técnico+)."""
+    modalidades = ModalidadeBolsa.objects.annotate(
+        total_bolsas=Count('bolsa'),
+    )
+    return render(request, 'bolsas/modalidades.html', {
+        'modalidades': modalidades,
+    })
+
+
+@perfil_required(Perfil.PERFIL_TECNICO, Perfil.PERFIL_DIRETOR, Perfil.PERFIL_PROREITOR)
+def modalidade_nova(request):
+    """Criação de modalidade (técnico+)."""
+    if request.method == 'POST':
+        form = ModalidadeBolsaForm(request.POST)
+        if form.is_valid():
+            modalidade = form.save()
+            messages.success(request, f'Modalidade {modalidade.sigla} criada com sucesso.')
+            return redirect('modalidades_lista')
+    else:
+        form = ModalidadeBolsaForm()
+
+    return render(request, 'bolsas/modalidade_form.html', {
+        'form': form,
+        'titulo': 'Nova modalidade',
+    })
+
+
+@perfil_required(Perfil.PERFIL_TECNICO, Perfil.PERFIL_DIRETOR, Perfil.PERFIL_PROREITOR)
+def modalidade_editar(request, pk):
+    """Edição de modalidade (técnico+)."""
+    modalidade = get_object_or_404(ModalidadeBolsa, pk=pk)
+
+    if request.method == 'POST':
+        form = ModalidadeBolsaForm(request.POST, instance=modalidade)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Modalidade {modalidade.sigla} atualizada com sucesso.')
+            return redirect('modalidades_lista')
+    else:
+        form = ModalidadeBolsaForm(instance=modalidade)
+
+    return render(request, 'bolsas/modalidade_form.html', {
+        'form': form,
+        'titulo': f'Editar modalidade {modalidade.sigla}',
     })
