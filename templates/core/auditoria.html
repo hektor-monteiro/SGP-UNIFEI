@@ -41,6 +41,7 @@
             <th>Caminho</th>
             <th>View</th>
             <th>IP</th>
+            <th>Justificativa</th>
         </tr>
         {% for log in logs %}
         <tr>
@@ -52,6 +53,7 @@
             <td style="font-size:0.85em; word-break:break-all;">{{ log.caminho }}</td>
             <td style="font-size:0.85em;">{{ log.view|default:"—" }}</td>
             <td style="font-size:0.85em;">{{ log.ip|default:"—" }}</td>
+            <td style="font-size:0.85em;">{{ log.justificativa|default:"—"|truncatechars:80 }}</td>
         </tr>
         {% endfor %}
     </table>

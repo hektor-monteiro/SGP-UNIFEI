@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Excluir membro da equipe{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:750px;">
+    <h2>Excluir membro da equipe</h2>
+    <p style="color:#666; font-size:0.9rem;">
+        Projeto: <strong>{{ projeto.codigo }}</strong> — {{ projeto.titulo|truncatechars:70 }}
+    </p>
+
+    <p>
+        Você está prestes a excluir <strong>{{ membro.pessoa.nome }}</strong>
+        ({{ membro.get_funcao_display }}) da equipe. A exclusão apaga o
+        registro do cadastro e <strong>não pode ser desfeita</strong>.
+    </p>
+
+    <p style="color:#b71c1c; font-size:0.85rem;">
+        A justificativa é obrigatória e fica registrada no log de
+        auditoria LGPD (§6).
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+            <p>
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <span style="color:#b71c1c; font-size:0.85rem;">{{ field.errors|first }}</span>
+                {% endif %}
+                {% if field.help_text %}
+                    <span style="color:#666; font-size:0.8rem;">{{ field.help_text }}</span>
+                {% endif %}
+            </p>
+        {% endfor %}
+        <button type="submit" class="btn" style="background-color:#b71c1c;">Excluir e registrar justificativa</button>
+        <a href="{% url 'projeto_detalhe' projeto.pk %}" style="color:#003366; margin-left:15px;">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

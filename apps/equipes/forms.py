@@ -70,3 +70,25 @@ class MembroEquipeForm(forms.ModelForm):
             self.instance.projeto = self.projeto
         self.instance.ativo = self.instance.data_saida is None
         return super().save(commit)
+
+
+class JustificativaExclusaoForm(forms.Form):
+    """Justificativa obrigatória para excluir um membro da equipe (§3.8).
+
+    O texto é anexado ao registro da exclusão no log de auditoria LGPD
+    (§6) — a exclusão apaga o cadastro, mas a justificativa permanece.
+    """
+
+    justificativa = forms.CharField(
+        label='Justificativa da exclusão',
+        max_length=1000,
+        help_text=(
+            'Motivo da exclusão do membro. Fica registrada no log de '
+            'auditoria LGPD junto da exclusão.'
+        ),
+        widget=forms.Textarea(attrs={'rows': 4, 'autofocus': True}),
+        error_messages={
+            'required': 'Informe a justificativa da exclusão do membro.',
+            'max_length': 'A justificativa pode ter no máximo 1000 caracteres.',
+        },
+    )

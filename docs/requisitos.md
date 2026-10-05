@@ -91,6 +91,7 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 ### 3.8 Membro de Equipe
 - Tipos: Aluno, Docente, Técnico Administrativo, Colaborador Externo
 - Vínculo com projeto: data de entrada, data de saída, função/papel
+- **Exclusão de membro exige justificativa obrigatória**, registrada no log de auditoria LGPD (§6)
 
 ### 3.9 Plano de Trabalho
 - Vinculado ao aluno e ao projeto

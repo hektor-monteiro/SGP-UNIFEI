@@ -168,6 +168,11 @@ class LogAuditoria(TimeStampedModel):
     metodo = models.CharField(max_length=10)
     status = models.PositiveSmallIntegerField(null=True, blank=True)
     ip = models.GenericIPAddressField(null=True, blank=True)
+    # Justificativa livre anexada pela view (ex.: exclusão de membro, §3.8)
+    justificativa = models.TextField(
+        blank=True,
+        help_text='Justificativa informada pela ação (quando exigida).',
+    )
 
     class Meta:
         verbose_name = 'Log de Auditoria'

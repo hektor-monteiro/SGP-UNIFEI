@@ -72,12 +72,7 @@
                     <button type="submit" style="background:none; border:none; color:#003366; cursor:pointer; font-size:inherit; font-family:inherit; padding:0; text-decoration:underline;">Encerrar</button>
                 </form>
                 {% endif %}
-                <form method="post" action="{% url 'membro_excluir' membro.pk %}"
-                      style="display:inline; margin-left:8px;"
-                      onsubmit="return confirm('Remover {{ membro.pessoa.nome|escapejs }} da equipe? Esta ação não pode ser desfeita.');">
-                    {% csrf_token %}
-                    <button type="submit" style="background:none; border:none; color:#b71c1c; cursor:pointer; font-size:inherit; font-family:inherit; padding:0; text-decoration:underline;">Excluir</button>
-                </form>
+                <a href="{% url 'membro_excluir' membro.pk %}" style="color:#b71c1c; margin-left:8px;">Excluir</a>
             </td>
             {% endif %}
         </tr>

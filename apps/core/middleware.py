@@ -36,6 +36,10 @@ def _registrar(acao, request, usuario, status, view=''):
 
     `request` pode ser um HttpRequest "pelado" (ex.: `Client.login()`
     do Django, sem method/path) — por isso os `or ''`.
+
+    Views que exigem justificativa (ex.: exclusão de membro) podem definir
+    `request.justificativa_auditoria` antes de responder; o valor é anexado
+    ao registro criado aqui.
     """
     LogAuditoria.objects.create(
         usuario=usuario,
@@ -45,6 +49,9 @@ def _registrar(acao, request, usuario, status, view=''):
         metodo=getattr(request, 'method', '') or '',
         status=status,
         ip=_ip_da_requisicao(request),
+        justificativa=(
+            getattr(request, 'justificativa_auditoria', '') or ''
+        )[:1000],
     )
 
 

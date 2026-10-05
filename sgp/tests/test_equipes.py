@@ -199,21 +199,45 @@ class EquipeTests(TestCase):
     def test_excluir_membro_e_registra_auditoria(self):
         self.client.login(username='tec_eq', password='x')
         url = reverse('membro_excluir', args=[self.membro.pk])
-        resp = self.client.post(url)
+        justificativa = 'Cadastro duplicado por erro de digitação.'
+        resp = self.client.post(url, {'justificativa': justificativa})
         self.assertEqual(resp.status_code, 302)
         self.assertFalse(MembroEquipe.objects.filter(pk=self.membro.pk).exists())
-        self.assertTrue(
-            LogAuditoria.objects.filter(
-                acao='exclusao',
-                usuario__username='tec_eq',
-                caminho__contains='/excluir/',
-            ).exists(),
+        log = LogAuditoria.objects.get(
+            acao='exclusao',
+            usuario__username='tec_eq',
+            caminho__contains='/excluir/',
         )
+        self.assertEqual(log.justificativa, justificativa)
 
-    def test_excluir_get_nao_remove(self):
+    def test_excluir_sem_justificativa_nao_remove(self):
+        """POST sem (ou com) justificativa vazia volta ao form com erro."""
         self.client.login(username='tec_eq', password='x')
         url = reverse('membro_excluir', args=[self.membro.pk])
-        self.assertEqual(self.client.get(url).status_code, 302)
+        for dados in ({}, {'justificativa': '   '}):
+            resp = self.client.post(url, dados)
+            self.assertEqual(resp.status_code, 200)
+            self.assertContains(resp, 'Informe a justificativa')
+        self.assertTrue(MembroEquipe.objects.filter(pk=self.membro.pk).exists())
+
+    def test_excluir_get_mostra_confirmacao_e_nao_remove(self):
+        """O GET abre a página de confirmação com justificativa obrigatória."""
+        self.client.login(username='tec_eq', password='x')
+        url = reverse('membro_excluir', args=[self.membro.pk])
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'justificativa')
+        self.assertContains(resp, 'não pode ser desfeita')
+        self.assertTrue(MembroEquipe.objects.filter(pk=self.membro.pk).exists())
+
+    def test_aluno_negado_na_exclusao(self):
+        """Aluno não vê nem confirma a exclusão (403, sem remoção)."""
+        url = reverse('membro_excluir', args=[self.membro.pk])
+        self.client.login(username='alu_eq', password='x')
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertEqual(
+            self.client.post(url, {'justificativa': 'x'}).status_code, 403,
+        )
         self.assertTrue(MembroEquipe.objects.filter(pk=self.membro.pk).exists())
 
     # ------------------------------------------------------------------

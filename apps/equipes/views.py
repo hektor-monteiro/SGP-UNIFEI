@@ -13,7 +13,7 @@ from django.views.decorators.cache import never_cache
 from apps.core.permissions import perfil_de, pode_gerir
 from apps.projetos.models import Projeto
 
-from .forms import MembroEquipeForm
+from .forms import JustificativaExclusaoForm, MembroEquipeForm
 from .models import MembroEquipe
 
 
@@ -106,18 +106,38 @@ def membro_encerrar(request, pk):
 
 @login_required
 def membro_excluir(request, pk):
-    """Remove o membro da equipe (POST — para correção de cadastro)."""
+    """Exclui o membro (correção de cadastro) — exige justificativa (§3.8).
+
+    A justificativa é obrigatória no formulário de confirmação e fica
+    registrada no log de auditoria LGPD junto da exclusão.
+    """
     membro = get_object_or_404(
         MembroEquipe.objects.select_related('projeto', 'pessoa'),
         pk=pk,
     )
     if not _pode_gerir(request.user, membro.projeto):
         raise PermissionDenied
-    if request.method != 'POST':
-        return redirect('projeto_detalhe', pk=membro.projeto_id)
 
     projeto_pk = membro.projeto_id
     nome = membro.pessoa.nome
-    membro.delete()
-    messages.success(request, f'{nome} removido da equipe.')
-    return redirect('projeto_detalhe', pk=projeto_pk)
+
+    if request.method == 'POST':
+        form = JustificativaExclusaoForm(request.POST)
+        if form.is_valid():
+            # Anexada ao registro da exclusão pelo AuditoriaMiddleware
+            request.justificativa_auditoria = form.cleaned_data['justificativa']
+            membro.delete()
+            messages.success(
+                request,
+                f'{nome} removido da equipe. '
+                'Justificativa registrada na auditoria.',
+            )
+            return redirect('projeto_detalhe', pk=projeto_pk)
+    else:
+        form = JustificativaExclusaoForm()
+
+    return render(request, 'equipes/excluir.html', {
+        'form': form,
+        'membro': membro,
+        'projeto': membro.projeto,
+    })
