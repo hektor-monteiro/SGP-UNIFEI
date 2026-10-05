@@ -44,8 +44,11 @@ docker compose down
 # Testes
 docker compose exec app python manage.py test
 
-# Lint (TODO: configurar ferramenta exata — flake8, ruff, etc.)
-# docker compose exec app ruff check .
+# Lint (ruff — configurado em ruff.toml; dependência em requirements-dev.txt)
+docker compose exec app ruff check .
+
+# Verificação completa local (lint + testes) — espelho do CI
+./scripts/verificar.sh
 
 # Typecheck (TODO: configurar mypy)
 # docker compose exec app mypy .
@@ -222,9 +225,9 @@ Antes de considerar qualquer tarefa concluída:
 
 ## TODOs Pendentes
 
-- [ ] Definir ferramenta de lint (ruff, flake8, etc.)
+- [x] Definir ferramenta de lint (ruff — `ruff.toml` + `requirements-dev.txt`)
 - [ ] Definir ferramenta de typecheck (mypy, pyright, etc.)
-- [ ] Configurar CI/CD (GitHub Actions ou GitLab CI)
+- [x] Configurar CI/CD (`.github/workflows/ci.yml` — ativa no primeiro `git push`; badge e branch protegida pendem de repositório remoto)
 - [ ] Definir cobertura de testes mínima
 - [ ] Configurar ambiente de staging
 - [ ] Definir processo de deploy

@@ -1,0 +1,66 @@
+# CI/CD do SGP-UNIFEI — GitHub Actions.
+#
+# Este workflow "liga sozinho" no primeiro `git push` para um repositório
+# GitHub (hoje o projeto é local — AGENTS.md). Se a hospedagem escolhida
+# for o GitLab, o equivalente é um `.gitlab-ci.yml` com os mesmos passos:
+# lint → testes → build da imagem.
+#
+# Espelho local (sem remote): ./scripts/verificar.sh
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  testes:
+    name: Lint + testes
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: sgp
+          POSTGRES_PASSWORD: sgp
+          POSTGRES_DB: sgp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # settings.py usa decouple: default do host é 'db' (docker) — no
+      # runner do CI o PostgreSQL roda na própria máquina.
+      DB_HOST: localhost
+      DB_PORT: "5432"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Testes Django
+        run: python manage.py test
+
+  build:
+    name: Build da imagem Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (valida o Dockerfile)
+        run: docker build -t sgp-unifei:ci .
