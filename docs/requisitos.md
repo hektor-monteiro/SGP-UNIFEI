@@ -262,15 +262,17 @@ Com base na planilha, identificamos entidades que não estavam no modelo inicial
 
 ### Fase 2 — Modelagem Detalhada
 - [x] Diagrama Entidade-Relacionamento (DER) — `docs/der.md`
-- [ ] Protótipos de telas
-- [ ] Matriz de permissões detalhada
-- [ ] Definição de indicadores (fórmulas e fontes)
+- [ ] Protótipos de telas (não aplicável — telas implementadas diretamente;
+      o inventário de rotas/quem acessa está em `docs/permissoes.md`)
+- [x] Matriz de permissões detalhada — `docs/permissoes.md`
+- [x] Definição de indicadores (fórmulas e fontes) — `docs/indicadores.md`
 
 ### Fase 3 — Setup do Projeto
 - [x] Inicializar repositório git
 - [x] Configurar ambiente Docker
 - [x] Criar projeto Django + app inicial
-- [ ] Configurar CI (GitHub Actions ou GitLab CI)
+- [x] Configurar CI (`.github/workflows/ci.yml` — ativa no primeiro push;
+      verificação local via `./scripts/verificar.sh`)
 
 ### Fase 4 — Desenvolvimento Incremental
 - [x] Autenticação e permissões (§2)
