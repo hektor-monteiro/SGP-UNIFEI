@@ -10,6 +10,7 @@ from apps.core.models import Instituicao, Perfil
 from apps.projetos.models import Pessoa, Projeto
 
 from apps.bolsas.models import Bolsa, ModalidadeBolsa
+from apps.equipes.models import MembroEquipe
 from apps.relatorios.models import Relatorio
 
 
@@ -432,3 +433,109 @@ class IntegracoesTests(TestCase):
             response, reverse('relatorio_detalhe', kwargs={'pk': self.rel_submetido.pk}),
         )
         self.assertContains(response, 'Submetido')
+
+
+class CoorientadorAvaliacaoTests(TestCase):
+    """Avaliação por co-orientador: vínculo ativo em MembroEquipe (§3.10)."""
+
+    def setUp(self):
+        inst, _ = Instituicao.objects.get_or_create(
+            sigla='IMC', defaults={'nome': 'IMC'},
+        )
+        self.modalidade, _ = ModalidadeBolsa.objects.get_or_create(
+            sigla='PIBIC', defaults={'nome': 'Iniciação Científica'},
+        )
+        self.coordenador = Pessoa.objects.create(
+            nome='Coordenador CO', email='coordco@unifei.edu.br',
+            tipo='docente', instituicao=inst,
+        )
+        self.coorientador = Pessoa.objects.create(
+            nome='Docente Coorientador', email='coorient@unifei.edu.br',
+            tipo='docente', instituicao=inst,
+        )
+        self.coorientador_inativo = Pessoa.objects.create(
+            nome='Docente Ex-Coorientador', email='excoorient@unifei.edu.br',
+            tipo='docente', instituicao=inst,
+        )
+        self.docente_alheio = Pessoa.objects.create(
+            nome='Docente Sem Vínculo CO', email='semvinc@unifei.edu.br',
+            tipo='docente', instituicao=inst,
+        )
+        self.aluno = Pessoa.objects.create(
+            nome='Aluno Coorientação', email='aluco@alunos.edu.br',
+            tipo='aluno', matricula='20260091', instituicao=inst,
+        )
+        self.projeto = Projeto.objects.create(
+            codigo='PVCO-2026', titulo='Projeto com coorientação',
+            data_registro=date.today(), data_inicio=date.today(),
+            coordenador=self.coordenador, instituicao=inst, status='vigente',
+        )
+        self.bolsa = Bolsa.objects.create(
+            projeto=self.projeto, aluno=self.aluno,
+            modalidade=self.modalidade,
+            data_inicio=date(2026, 3, 1), data_fim=date(2026, 11, 30),
+        )
+        self.rel_submetido = Relatorio.objects.create(
+            bolsa=self.bolsa, aluno=self.aluno, tipo='parcial',
+            titulo='Relatório do coorientando', status='submetido',
+        )
+        MembroEquipe.objects.create(
+            projeto=self.projeto, pessoa=self.coorientador,
+            funcao='coorientador', data_entrada=date(2026, 3, 1),
+        )
+        MembroEquipe.objects.create(
+            projeto=self.projeto, pessoa=self.coorientador_inativo,
+            funcao='coorientador', data_entrada=date(2026, 3, 1),
+            data_saida=date(2026, 6, 1), ativo=False,
+        )
+        _criar_usuario('doc_co', Perfil.PERFIL_DOCENTE, self.coorientador)
+        _criar_usuario(
+            'doc_co_out', Perfil.PERFIL_DOCENTE, self.coorientador_inativo,
+        )
+        _criar_usuario('doc_co_alheio', Perfil.PERFIL_DOCENTE, self.docente_alheio)
+        _criar_usuario('doc_co_coord', Perfil.PERFIL_DOCENTE, self.coordenador)
+
+    def _avaliar(self, username, nota='8.00'):
+        self.client.login(username=username, password='x')
+        return self.client.post(
+            reverse('relatorio_avaliar', kwargs={'pk': self.rel_submetido.pk}),
+            {'nota': nota, 'observacoes': 'Avaliado como co-orientador.'},
+        )
+
+    def test_coorientador_ativo_avalia(self):
+        response = self._avaliar('doc_co')
+        self.assertEqual(response.status_code, 302)
+        self.rel_submetido.refresh_from_db()
+        self.assertEqual(self.rel_submetido.status, 'aprovado')
+        self.assertEqual(self.rel_submetido.avaliado_por, self.coorientador)
+
+    def test_coorientador_inativo_nao_avalia(self):
+        response = self._avaliar('doc_co_out', nota='1.00')
+        self.assertEqual(response.status_code, 403)
+        self.rel_submetido.refresh_from_db()
+        self.assertEqual(self.rel_submetido.status, 'submetido')
+
+    def test_docente_sem_vinculo_nao_avalia(self):
+        response = self._avaliar('doc_co_alheio', nota='1.00')
+        self.assertEqual(response.status_code, 403)
+        self.rel_submetido.refresh_from_db()
+        self.assertEqual(self.rel_submetido.status, 'submetido')
+
+    def test_painel_mostra_relatorio_para_coorientador(self):
+        self.client.login(username='doc_co', password='x')
+        response = self.client.get(reverse('dashboard'))
+        self.assertContains(response, 'Relatório do coorientando')
+        # Sem vínculo não vê
+        self.client.logout()
+        self.client.login(username='doc_co_alheio', password='x')
+        response = self.client.get(reverse('dashboard'))
+        self.assertNotContains(response, 'Relatório do coorientando')
+
+    def test_lista_marca_como_avaliavel_para_coorientador(self):
+        self.client.login(username='doc_co', password='x')
+        response = self.client.get(reverse('relatorios_lista'))
+        self.assertIn(self.rel_submetido.pk, response.context['avaliaveis'])
+        self.client.logout()
+        self.client.login(username='doc_co_out', password='x')
+        response = self.client.get(reverse('relatorios_lista'))
+        self.assertNotIn(self.rel_submetido.pk, response.context['avaliaveis'])

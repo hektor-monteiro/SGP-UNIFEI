@@ -265,6 +265,21 @@ def _orientador_de(user, relatorio) -> bool:
     )
 
 
+def _e_coorientador(user, relatorio) -> bool:
+    """Docente com vínculo ativo de coorientador no projeto da bolsa."""
+    perfil = perfil_de(user)
+    if not (perfil and perfil.pessoa):
+        return False
+    if perfil.perfil != Perfil.PERFIL_DOCENTE:
+        return False
+    return MembroEquipe.objects.filter(
+        projeto=relatorio.bolsa.projeto,
+        pessoa=perfil.pessoa,
+        funcao='coorientador',
+        ativo=True,
+    ).exists()
+
+
 def _pode_editar(user, relatorio) -> bool:
     """Edita técnico+ sempre; aluno próprio e orientador só em rascunho/reprovado.
 
@@ -297,14 +312,11 @@ def _pode_submeter(user, relatorio) -> bool:
 
 
 def _pode_avaliar(user, relatorio) -> bool:
-    """Avalia: técnico+ (gerir) ou orientador do projeto da bolsa.
-
-    TODO: considerar co-orientadores (MembroEquipe) na autorização.
-    """
+    """Avalia: técnico+ (gerir), orientador ou co-orientador ativo do projeto."""
     perfil = perfil_de(user)
     if pode_gerir(perfil):
         return True
-    return _orientador_de(user, relatorio)
+    return _orientador_de(user, relatorio) or _e_coorientador(user, relatorio)
 
 
 @login_required
@@ -344,10 +356,17 @@ def lista_relatorios(request):
             ).values_list('pk', flat=True)
         )
         avaliaveis = set(
-            relatorios.filter(
-                status='submetido',
-                bolsa__projeto__coordenador=perfil.pessoa,
-            ).values_list('pk', flat=True)
+            relatorios.filter(status='submetido')
+            .filter(
+                Q(bolsa__projeto__coordenador=perfil.pessoa)
+                | Q(
+                    bolsa__projeto__membros__pessoa=perfil.pessoa,
+                    bolsa__projeto__membros__funcao='coorientador',
+                    bolsa__projeto__membros__ativo=True,
+                )
+            )
+            .distinct()
+            .values_list('pk', flat=True)
         )
     else:
         editaveis = set()

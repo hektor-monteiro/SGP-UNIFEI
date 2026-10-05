@@ -35,15 +35,21 @@ def dashboard(request):
     perfil = getattr(request.user, 'perfil', None)
 
     # Relatórios submetidos que o usuário pode avaliar:
-    # técnico+ (ou superusuário): todos; docente: os de seus orientandos.
+    # técnico+ (ou superusuário): todos; docente: orientandos e co-orientandos.
     relatorios_avaliar = Relatorio.objects.none()
     if request.user.is_superuser or (perfil and perfil.pelo_menos('tecnico')):
         relatorios_avaliar = Relatorio.objects.filter(status='submetido')
     elif perfil and perfil.perfil == 'docente' and perfil.pessoa:
         relatorios_avaliar = Relatorio.objects.filter(
             status='submetido',
-            bolsa__projeto__coordenador=perfil.pessoa,
-        )
+        ).filter(
+            Q(bolsa__projeto__coordenador=perfil.pessoa)
+            | Q(
+                bolsa__projeto__membros__pessoa=perfil.pessoa,
+                bolsa__projeto__membros__funcao='coorientador',
+                bolsa__projeto__membros__ativo=True,
+            )
+        ).distinct()
 
     contexto = {
         'perfil': perfil,
@@ -120,7 +126,10 @@ def lgpd_pagina(request):
     perfil = getattr(request.user, 'perfil', None)
     contexto = {
         'perfil': perfil,
-        'pode_ver_auditoria': pode_gerir(perfil),
+        # Superusuário não tem Perfil; usuário sem Perfil não é encarregado
+        # (o link só aparece para quem passaria no /lgpd/auditoria/).
+        'pode_ver_auditoria': request.user.is_superuser
+        or (perfil is not None and pode_gerir(perfil)),
     }
     return render(request, 'core/lgpd.html', contexto)
 

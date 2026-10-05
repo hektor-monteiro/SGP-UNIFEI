@@ -243,3 +243,17 @@ class LgpdTests(TestCase):
         self.client.get(reverse('dashboard'))
         # Leituras (GET) comuns não são auditadas
         self.assertEqual(LogAuditoria.objects.count(), antes)
+
+    def test_link_auditoria_conforme_perfil(self):
+        """Sem Perfil: sem link de auditoria (rota 403); superusuário: vê."""
+        User.objects.create_user('sem_perfil_lgp', password='x')
+        self.client.login(username='sem_perfil_lgp', password='x')
+        resp = self.client.get(reverse('lgpd'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, reverse('auditoria'))
+        self.assertEqual(self.client.get(reverse('auditoria')).status_code, 403)
+
+        self.client.logout()
+        self.client.login(username='adm_lgp', password='x')
+        resp = self.client.get(reverse('lgpd'))
+        self.assertContains(resp, reverse('auditoria'))

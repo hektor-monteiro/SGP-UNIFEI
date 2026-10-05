@@ -35,7 +35,7 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | Alocar/remover avaliadores | — | — | ✅ | ✅ | ✅ | ✅ |
 | Avaliar proposta | — | se alocado | se alocado | se alocado | se alocado | — |
 | Criar plano de trabalho | próprio (sem plano) | bolsas coordenadas | todos | todos | todos | todos |
-| Avaliar plano/relatório | — | só orientandos | ✅ | ✅ | ✅ | ✅ |
+| Avaliar plano/relatório | — | orientandos + co-orientados | ✅ | ✅ | ✅ | ✅ |
 | Emitir comprovantes | bolsa própria, participação própria, avaliações que fez | bolsas orientadas + os acima | tudo | tudo | tudo | tudo |
 | Indicadores + CSV / auditoria / tratar solicitações LGPD | — | — | ✅ | ✅ | ✅ | ✅ |
 | Verificar comprovante (código) | público (sem login) | idem | idem | idem | idem | idem |
@@ -46,7 +46,7 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 
 | Rota | Ação | Quem pode | Regra especial |
 |---|---|---|---|
-| `/painel/` | visualizar | autenticado | conteúdo por perfil; fila de relatórios: técnico+ vê todos, docente só coordenados |
+| `/painel/` | visualizar | autenticado | conteúdo por perfil; fila de relatórios: técnico+ vê todos, docente orientandos e co-orientandos |
 | `/lgpd/` | visualizar | autenticado | consentimento e direitos do titular |
 | `/lgpd/consentimento/` (POST) | editar | autenticado com Perfil | superusuário não é titular → redirect |
 | `/lgpd/consentimento/revogar/` (POST) | editar | autenticado com Perfil | idem |
@@ -96,7 +96,7 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | `/relatorios/novo/` | criar | com Perfil | mesmo escopo de bolsas (aluno próprio / docente coordenadas / téc+ todas) |
 | `/relatorios/<pk>/editar/` | editar | téc+ sempre; aluno próprio e orientador em rascunho/reprovado | status final trava edição |
 | `/relatorios/<pk>/submeter/` (POST) | editar | dono, orientador ou téc+ | limpa avaliação anterior |
-| `/relatorios/<pk>/avaliar/` | editar | **téc+ ou orientador** (docente coordenador) | exige status `submetido`; nota ≥ mínima → aprovação automática |
+| `/relatorios/<pk>/avaliar/` | editar | **téc+ ou orientador ou co-orientador ativo** (função em `MembroEquipe`) | exige status `submetido`; nota ≥ mínima → aprovação automática |
 | `/indicadores/` e `/indicadores/csv/` | visualizar | **téc+** (`perfil_required`) | |
 
 ### 3.6 Editais, propostas e avaliação (`apps/editais/`)
@@ -132,8 +132,6 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 2. **Emissão de comprovantes** barra elegibilidade pela *queryset* dos campos
    do formulário (validação do Django) — não há `raise PermissionDenied`
    explícito; POST direto com pk inválido → erro de form.
-3. **Usuário autenticado sem Perfil** vê o link de auditoria na página LGPD
-   (`pode_gerir(None)` = True), mas `/lgpd/auditoria/` o bloqueia com 403 —
-   caso-limite de UI, sem risco de acesso. *(Melhoria pendente.)*
-4. **Co-orientador não avalia relatórios** (`_pode_avaliar` = téc+ ou
-   coordenador; TODO no código) — já é elegível em comprovantes de bolsa.
+3. **Co-orientador avalia relatórios** desde que o vínculo em `MembroEquipe`
+   (`funcao='coorientador'`) esteja **ativo** — encerrado o vínculo, perde o
+   acesso (testado em `sgp/tests/test_relatorios.py`).
