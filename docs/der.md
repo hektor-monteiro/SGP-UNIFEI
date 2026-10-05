@@ -123,8 +123,15 @@
 | processo_sipac_id | UUID | FK → ProcessoSipac | Número do processo SIPAC |
 | instituto_id | UUID | FK → Instituto | Instituto vinculado |
 | proposta_id | UUID | FK → Proposta | Proposta que originou o projeto |
+| grande_area_id | BIGINT | FK → GrandeAreaConhecimento | Grande Área do CNPq¹ |
+| area_id | BIGINT | FK → AreaConhecimento | Área do CNPq¹ |
+| subarea_id | BIGINT | FK → SubareaConhecimento | Subárea do CNPq¹ |
 | criado_em | TIMESTAMP | Sim | Data de criação |
 | atualizado_em | TIMESTAMP | Sim | Data de última atualização |
+
+¹ Obrigatório no formulário (cadeia coerente GA → Área → Subárea); nulo no
+banco por compatibilidade com registros antigos à migração. A ficha **ODS**
+(≥ 1 item) é uma relação N:N — ver §2.16.
 
 ---
 
@@ -316,6 +323,33 @@
 
 ---
 
+### 2.16 Catálogos de Referência (ODS e Áreas do Conhecimento)
+
+Dados de referência carregados pela migração `projetos.0004`
+(fonte: `apps/projetos/data/catalogo_cnpq_ods.json` — Tabela de Áreas do
+Conhecimento do CNPq/Lattes de 30/06/2025 e os 17 ODS da ONU em pt-BR).
+
+**ODS** (17 registros)
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| id | BIGINT | PK | Identificador único |
+| numero | SMALLINT | Sim | Número do ODS (1–17, único) |
+| nome | VARCHAR(120) | Sim | Nome do ODS |
+
+**GrandeAreaConhecimento** (9 registros) · **AreaConhecimento** (87) ·
+**SubareaConhecimento** (366)
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| id | BIGINT | PK | Identificador único |
+| codigo | VARCHAR(10) | Sim | Código CNPq de 8 dígitos (único) |
+| nome | VARCHAR(150) | Sim | Nome do nível |
+| grande_area_id | BIGINT | FK → GrandeAreaConhecimento | Só em AreaConhecimento |
+| area_id | BIGINT | FK → AreaConhecimento | Só em SubareaConhecimento |
+
+---
+
 ## 3. Relacionamentos
 
 | Origem | Destino | Cardinalidade | Descrição |
@@ -338,6 +372,12 @@
 | Relatorio | Avaliacao | 1:N | Um relatório tem várias avaliações |
 | Pessoa | Comprovante | 1:N | Uma pessoa tem vários comprovantes |
 | Projeto | Comprovante | 1:N | Um projeto tem vários comprovantes |
+| Projeto | ODS | N:N | ODS pertinentes ao projeto (mínimo 1) |
+| Projeto | GrandeAreaConhecimento | N:1 | Grande Área do CNPq |
+| Projeto | AreaConhecimento | N:1 | Área do CNPq |
+| Projeto | SubareaConhecimento | N:1 | Subárea do CNPq |
+| GrandeAreaConhecimento | AreaConhecimento | 1:N | Uma grande área tem várias áreas |
+| AreaConhecimento | SubareaConhecimento | 1:N | Uma área tem várias subáreas |
 
 ---
 

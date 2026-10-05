@@ -64,6 +64,8 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 
 ### 3.4 Projeto
 - Código único **gerado pelo sistema** no padrão `PVDI###-AAAA` (sequencial global + ano de registro; pode ser sobrescrito)
+- **ODS obrigatório**: ao menos um dos 17 Objetivos de Desenvolvimento Sustentável (checkboxes)
+- **Área de Conhecimento obrigatória** conforme a tabela do CNPq: Grande Área → Área → Subárea (cascata com validação de coerência)
 - Pode ter fomento (recursos para pesquisa) ou não
 - Pode ter múltiplas bolsas de fomentadores distintos
 - Pode ter múltiplos membros (internos e externos)

@@ -28,6 +28,73 @@ class Pessoa(TimeStampedModel):
     def __str__(self):
         return self.nome
 
+
+class ODS(TimeStampedModel):
+    """Objetivo de Desenvolvimento Sustentável (ONU, agenda 2030)."""
+
+    numero = models.PositiveSmallIntegerField(unique=True, verbose_name='número')
+    nome = models.CharField(max_length=120)
+
+    class Meta:
+        verbose_name = 'ODS'
+        verbose_name_plural = 'ODS'
+        ordering = ['numero']
+
+    def __str__(self):
+        return f'ODS {self.numero} - {self.nome}'
+
+
+class GrandeAreaConhecimento(TimeStampedModel):
+    """Grande Área da tabela de Áreas do Conhecimento do CNPq."""
+
+    codigo = models.CharField(max_length=10, unique=True)
+    nome = models.CharField(max_length=150)
+
+    class Meta:
+        verbose_name = 'Grande Área de Conhecimento'
+        verbose_name_plural = 'Grandes Áreas de Conhecimento'
+        ordering = ['codigo']
+
+    def __str__(self):
+        return self.nome
+
+
+class AreaConhecimento(TimeStampedModel):
+    """Área da tabela de Áreas do Conhecimento do CNPq."""
+
+    codigo = models.CharField(max_length=10, unique=True)
+    nome = models.CharField(max_length=150)
+    grande_area = models.ForeignKey(
+        GrandeAreaConhecimento, on_delete=models.CASCADE, related_name='areas',
+    )
+
+    class Meta:
+        verbose_name = 'Área de Conhecimento'
+        verbose_name_plural = 'Áreas de Conhecimento'
+        ordering = ['codigo']
+
+    def __str__(self):
+        return self.nome
+
+
+class SubareaConhecimento(TimeStampedModel):
+    """Subárea da tabela de Áreas do Conhecimento do CNPq."""
+
+    codigo = models.CharField(max_length=10, unique=True)
+    nome = models.CharField(max_length=150)
+    area = models.ForeignKey(
+        AreaConhecimento, on_delete=models.CASCADE, related_name='subareas',
+    )
+
+    class Meta:
+        verbose_name = 'Subárea de Conhecimento'
+        verbose_name_plural = 'Subáreas de Conhecimento'
+        ordering = ['codigo']
+
+    def __str__(self):
+        return self.nome
+
+
 class Projeto(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     codigo = models.CharField(max_length=50, unique=True)
@@ -49,6 +116,23 @@ class Projeto(TimeStampedModel):
     coordenador = models.ForeignKey(Pessoa, on_delete=models.SET_NULL, null=True, blank=True, related_name='projetos_coordenados')
     processo_sipac = models.ForeignKey(ProcessoSipac, on_delete=models.SET_NULL, null=True, blank=True)
     instituicao = models.ForeignKey(Instituicao, on_delete=models.SET_NULL, null=True, blank=True)
+    # Ficha ODS + Área do Conhecimento (obrigatórios no formulário; nulos no
+    # model por compatibilidade com registros anteriores a esta migração)
+    ods = models.ManyToManyField(
+        ODS, blank=True, related_name='projetos', verbose_name='ODS',
+    )
+    grande_area = models.ForeignKey(
+        GrandeAreaConhecimento, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='projetos', verbose_name='Grande Área',
+    )
+    area = models.ForeignKey(
+        AreaConhecimento, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='projetos',
+    )
+    subarea = models.ForeignKey(
+        SubareaConhecimento, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='projetos', verbose_name='Subárea',
+    )
 
     class Meta:
         verbose_name = 'Projeto'

@@ -8,13 +8,34 @@ from django.urls import reverse
 
 from apps.core.models import Perfil, Instituicao
 from apps.projetos.forms import MAX_PROJETOS_SEM_FOMENTO
-from apps.projetos.models import Pessoa, Projeto
+from apps.projetos.models import (
+    AreaConhecimento,
+    GrandeAreaConhecimento,
+    ODS,
+    Pessoa,
+    Projeto,
+    SubareaConhecimento,
+)
 
 
 def _criar_usuario(username, perfil, pessoa=None):
     user = User.objects.create_user(username, password='x')
     Perfil.objects.create(user=user, perfil=perfil, pessoa=pessoa)
     return user
+
+
+def _dados_cnpq(**extras):
+    """Ficha ODS + CNPq obrigatória, em cadeia coerente (GA→Área→Subárea)."""
+    grande_area = GrandeAreaConhecimento.objects.first()
+    area = grande_area.areas.first()
+    subarea = area.subareas.first()
+    return {
+        'ods': [ODS.objects.first().pk],
+        'grande_area': grande_area.pk,
+        'area': area.pk,
+        'subarea': subarea.pk,
+        **extras,
+    }
 
 
 def _criar_projeto(coord, com_fomento=False):
@@ -139,6 +160,7 @@ class RegraNegocioTests(TestCase):
         )
         self.user = _criar_usuario('doc_regra', Perfil.PERFIL_DOCENTE, self.docente)
         self.dados = {
+            **_dados_cnpq(),
             'codigo': 'NOVO-2026',
             'titulo': 'Novo projeto',
             'data_registro': date.today().isoformat(),
@@ -248,6 +270,7 @@ class EdicaoValoresTests(TestCase):
         response = self.client.post(
             reverse('projeto_editar', kwargs={'pk': self.projeto.pk}),
             {
+                **_dados_cnpq(),
                 'codigo': 'PVDI777-2026',
                 'titulo': 'Projeto atualizado',
                 'data_registro': '2026-01-10',
@@ -272,6 +295,7 @@ class GeracaoCodigoTests(TestCase):
         )
         self.user = _criar_usuario('tec_cod', Perfil.PERFIL_TECNICO)
         self.dados = {
+            **_dados_cnpq(),
             'titulo': 'Projeto com código gerado',
             'data_registro': date.today().isoformat(),
             'data_inicio': date.today().isoformat(),
@@ -366,3 +390,171 @@ class GeracaoCodigoTests(TestCase):
         self.assertEqual(
             Projeto.objects.filter(codigo='PVDI060-2026').count(), 1,
         )
+
+
+class OdsAreaConhecimentoTests(TestCase):
+    """Ficha ODS + Área do Conhecimento do CNPq no projeto (obrigatórias)."""
+
+    def setUp(self):
+        self.docente = Pessoa.objects.create(
+            nome='Docente Ficha', email='ficha@unifei.edu.br', tipo='docente',
+        )
+        self.user = _criar_usuario('tec_ficha', Perfil.PERFIL_TECNICO)
+        self.base = {
+            'titulo': 'Projeto com ficha ODS e CNPq',
+            'data_registro': date.today().isoformat(),
+            'data_inicio': date.today().isoformat(),
+            'status': 'vigente',
+            'coordenador': self.docente.pk,
+        }
+
+    def _post(self, **campos):
+        """POST em /projetos/novo/ com ficha completa, sobrescrevível."""
+        self.client.login(username='tec_ficha', password='x')
+        return self.client.post(
+            reverse('projeto_novo'),
+            {**self.base, **_dados_cnpq(), **campos},
+        )
+
+    def _existe(self):
+        return Projeto.objects.filter(
+            titulo='Projeto com ficha ODS e CNPq',
+        ).exists()
+
+    # ------------------------------------------------------------------
+    # Catálogo (migração de dados a partir do PDF do CNPq)
+    # ------------------------------------------------------------------
+
+    def test_catalogo_carregado_pela_migracao(self):
+        self.assertEqual(ODS.objects.count(), 17)
+        self.assertEqual(GrandeAreaConhecimento.objects.count(), 9)
+        self.assertEqual(AreaConhecimento.objects.count(), 87)
+        self.assertEqual(SubareaConhecimento.objects.count(), 366)
+
+    def test_cadeia_do_catalogo_integra(self):
+        """Toda área tem grande área e toda subárea tem área (sem órfãs)."""
+        self.assertFalse(
+            AreaConhecimento.objects.filter(grande_area__isnull=True).exists(),
+        )
+        self.assertFalse(
+            SubareaConhecimento.objects.filter(area__isnull=True).exists(),
+        )
+        exatas = GrandeAreaConhecimento.objects.get(
+            nome='Ciências Exatas e da Terra',
+        )
+        self.assertEqual(exatas.areas.count(), 8)
+        matematica = AreaConhecimento.objects.get(nome='Matemática')
+        self.assertEqual(matematica.grande_area, exatas)
+
+    # ------------------------------------------------------------------
+    # Criação
+    # ------------------------------------------------------------------
+
+    def test_criacao_com_ods_e_cascata_completa(self):
+        ods_alvo = ODS.objects.get(numero=14)
+        response = self._post(ods=[ods_alvo.pk])
+        self.assertEqual(response.status_code, 302)
+        projeto = Projeto.objects.get(titulo='Projeto com ficha ODS e CNPq')
+        self.assertEqual(list(projeto.ods.all()), [ods_alvo])
+        self.assertIsNotNone(projeto.grande_area_id)
+        self.assertIsNotNone(projeto.area_id)
+        self.assertIsNotNone(projeto.subarea_id)
+        # cadeia coerente
+        self.assertEqual(projeto.area.grande_area, projeto.grande_area)
+        self.assertEqual(projeto.subarea.area, projeto.area)
+
+    def test_criacao_sem_ods_e_rejeitada(self):
+        response = self._post(ods=[])
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'obrigatório')
+        self.assertFalse(self._existe())
+
+    def test_criacao_sem_cnpq_e_rejeitada(self):
+        response = self._post(grande_area='', area='', subarea='')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'obrigatório')
+        self.assertFalse(self._existe())
+
+    def test_area_de_grande_area_diferente_rejeitada(self):
+        cnpq = _dados_cnpq()
+        outra_ga = GrandeAreaConhecimento.objects.exclude(
+            pk=cnpq['grande_area'],
+        ).first()
+        response = self._post(grande_area=outra_ga.pk)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'não pertence')
+        self.assertFalse(self._existe())
+
+    def test_subarea_de_area_diferente_rejeitada(self):
+        cnpq = _dados_cnpq()
+        outra_sub = SubareaConhecimento.objects.exclude(
+            area_id=cnpq['area'],
+        ).first()
+        response = self._post(subarea=outra_sub.pk)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'não pertence')
+        self.assertFalse(self._existe())
+
+    # ------------------------------------------------------------------
+    # Edição e exibição
+    # ------------------------------------------------------------------
+
+    def test_edicao_exige_ficha_completa(self):
+        """Registro antigo (sem ficha) só salva depois de completar ODS+CNPq."""
+        projeto = Projeto.objects.create(
+            codigo='PVDI400-2026', titulo='Projeto antigo sem ficha',
+            data_registro=date.today(), data_inicio=date.today(),
+            coordenador=self.docente,
+        )
+        self.client.login(username='tec_ficha', password='x')
+        url = reverse('projeto_editar', kwargs={'pk': projeto.pk})
+        # O registro antigo continua abrindo para complementação
+        self.assertEqual(self.client.get(url).status_code, 200)
+        # Sem a ficha, a edição é bloqueada
+        response = self.client.post(url, {
+            'codigo': 'PVDI400-2026',
+            'titulo': 'Projeto antigo sem ficha',
+            'data_registro': date.today().isoformat(),
+            'data_inicio': date.today().isoformat(),
+            'status': 'vigente',
+            'coordenador': self.docente.pk,
+        })
+        self.assertEqual(response.status_code, 200)
+        projeto.refresh_from_db()
+        self.assertIsNone(projeto.grande_area_id)
+        # Com a ficha completa, salva
+        response = self.client.post(url, {
+            **_dados_cnpq(),
+            'codigo': 'PVDI400-2026',
+            'titulo': 'Projeto antigo sem ficha',
+            'data_registro': date.today().isoformat(),
+            'data_inicio': date.today().isoformat(),
+            'status': 'vigente',
+            'coordenador': self.docente.pk,
+        })
+        self.assertEqual(response.status_code, 302)
+        projeto.refresh_from_db()
+        self.assertIsNotNone(projeto.subarea_id)
+        self.assertEqual(projeto.ods.count(), 1)
+
+    def test_detalhe_exibe_ods_e_areas(self):
+        response = self._post()
+        self.assertEqual(response.status_code, 302)
+        projeto = Projeto.objects.get(titulo='Projeto com ficha ODS e CNPq')
+        detalhe = self.client.get(
+            reverse('projeto_detalhe', kwargs={'pk': projeto.pk}),
+        )
+        self.assertContains(detalhe, 'ODS 1 - Erradicação da pobreza')
+        self.assertContains(detalhe, 'Ciências Exatas e da Terra')
+        self.assertContains(detalhe, 'Matemática')
+        self.assertContains(detalhe, 'Álgebra')
+
+    def test_form_exibe_checkboxes_ods_e_mapa_da_cascata(self):
+        self.client.login(username='tec_ficha', password='x')
+        response = self.client.get(reverse('projeto_novo'))
+        # checkboxes dos 17 ODS
+        self.assertContains(response, 'id_ods_0')
+        self.assertContains(response, 'Erradicação da pobreza')
+        # mapa da hierarquia + script da cascata
+        self.assertContains(response, 'hierarquia-cnpq')
+        self.assertContains(response, 'cascata_cnpq.js')

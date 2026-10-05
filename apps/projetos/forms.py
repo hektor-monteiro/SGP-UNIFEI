@@ -4,7 +4,13 @@ from datetime import date
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import Pessoa, Projeto, gerar_codigo_projeto
+from .models import (
+    AreaConhecimento,
+    Pessoa,
+    Projeto,
+    SubareaConhecimento,
+    gerar_codigo_projeto,
+)
 
 # Máximo de projetos sem fomento por coordenador (regra de negócio da DIP)
 MAX_PROJETOS_SEM_FOMENTO = 2
@@ -20,6 +26,7 @@ class ProjetoForm(forms.ModelForm):
             'data_inicio', 'data_termino', 'status',
             'fomentador', 'recursos_internos', 'recursos_externos',
             'coordenador', 'processo_sipac', 'instituicao',
+            'ods', 'grande_area', 'area', 'subarea',
         ]
         widgets = {
             # format='%Y-%m-%d': o input date do HTML exige AAAA-MM-DD;
@@ -28,6 +35,7 @@ class ProjetoForm(forms.ModelForm):
             'data_inicio': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'data_termino': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'descricao': forms.Textarea(attrs={'rows': 4}),
+            'ods': forms.CheckboxSelectMultiple(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -38,6 +46,36 @@ class ProjetoForm(forms.ModelForm):
         self.fields['coordenador'].empty_label = '— Selecione o docente —'
         self.fields['data_termino'].required = False
         self.fields['descricao'].required = False
+
+        # Ficha ODS + Área do Conhecimento obrigatórias (decisão de produto)
+        self.fields['ods'].required = True
+        self.fields['ods'].help_text = (
+            'Selecione ao menos um ODS pertinente ao projeto.'
+        )
+        for nome, rotulo in (
+            ('grande_area', 'a Grande Área'),
+            ('area', 'a Área'),
+            ('subarea', 'a Subárea'),
+        ):
+            campo = self.fields[nome]
+            campo.required = True
+            campo.empty_label = f'— Selecione {rotulo} —'
+        self.fields['subarea'].help_text = (
+            'Tabela de Áreas do Conhecimento do CNPq — escolha a Grande Área '
+            'e depois a Área para filtrar as subáreas.'
+        )
+
+        # Mapa de hierarquia consumido pelo JS da cascata (id -> id do pai)
+        self.hierarquia_ids = {
+            'areas': {
+                str(a.pk): str(a.grande_area_id)
+                for a in AreaConhecimento.objects.all()
+            },
+            'subareas': {
+                str(s.pk): str(s.area_id)
+                for s in SubareaConhecimento.objects.all()
+            },
+        }
         # _state.adding: detecção correta de "criação" — o pk do Projeto é
         # UUID com default e já nasce preenchido (instance.pk nunca é None)
         if self.instance._state.adding:
@@ -62,6 +100,22 @@ class ProjetoForm(forms.ModelForm):
         elif self.instance._state.adding:
             cleaned['codigo'] = gerar_codigo_projeto(
                 cleaned.get('data_registro'),
+            )
+
+        # Cascata CNPq: a combinação Grande Área → Área → Subárea deve ser
+        # coerente (os três são obrigatórios; aqui só se valida a relação)
+        grande_area = cleaned.get('grande_area')
+        area = cleaned.get('area')
+        subarea = cleaned.get('subarea')
+        if area and grande_area and area.grande_area_id != grande_area.pk:
+            self.add_error(
+                'area',
+                'Área de Conhecimento não pertence à Grande Área selecionada.',
+            )
+        if subarea and area and subarea.area_id != area.pk:
+            self.add_error(
+                'subarea',
+                'Subárea de Conhecimento não pertence à Área selecionada.',
             )
 
         coordenador = cleaned.get('coordenador')

@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from decouple import config
 
@@ -90,7 +91,15 @@ STORAGES = {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        # A manifest exige collectstatic: usada só em produção (o
+        # entrypoint-prod coleta os estáticos). Desenvolvimento e testes
+        # usam a storage simples (URLs sem hash) — em DEBUG o WhiteNoise
+        # serve pelos finders dos apps, sem dependência de manifest.
+        'BACKEND': (
+            'whitenoise.storage.CompressedStaticFilesStorage'
+            if DEBUG or 'test' in sys.argv
+            else 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        ),
     },
 }
 

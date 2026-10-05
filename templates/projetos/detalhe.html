@@ -30,6 +30,10 @@
         <tr><th>Recursos internos</th><td>{% if projeto.recursos_internos %}R$ {{ projeto.recursos_internos }}{% else %}—{% endif %}</td></tr>
         <tr><th>Recursos externos</th><td>{% if projeto.recursos_externos %}R$ {{ projeto.recursos_externos }}{% else %}—{% endif %}</td></tr>
         <tr><th>Processo SIPAC</th><td>{{ projeto.processo_sipac|default:"—" }}</td></tr>
+        <tr><th>ODS</th><td>{% for o in projeto.ods.all %}{{ o }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td></tr>
+        <tr><th>Grande Área</th><td>{{ projeto.grande_area|default:"—" }}</td></tr>
+        <tr><th>Área</th><td>{{ projeto.area|default:"—" }}</td></tr>
+        <tr><th>Subárea</th><td>{{ projeto.subarea|default:"—" }}</td></tr>
         {% if projeto.descricao %}
         <tr><th>Descrição</th><td>{{ projeto.descricao|linebreaksbr }}</td></tr>
         {% endif %}

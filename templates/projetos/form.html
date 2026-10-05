@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ titulo }}{% endblock %}
 
@@ -29,5 +30,11 @@
         <button type="submit" class="btn">Salvar</button>
         <a href="{% url 'projetos_lista' %}" style="color:#003366; margin-left:15px;">Cancelar</a>
     </form>
+
+    {% if form.hierarquia_ids %}
+        {# Cascata CNPq: mapa id→pai para filtrar Área e Subárea #}
+        {{ form.hierarquia_ids|json_script:"hierarquia-cnpq" }}
+        <script src="{% static 'js/cascata_cnpq.js' %}"></script>
+    {% endif %}
 </div>
 {% endblock %}
