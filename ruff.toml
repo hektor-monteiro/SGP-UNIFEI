@@ -1,0 +1,20 @@
+# Configuração do ruff — ferramenta de lint do SGP-UNIFEI (AGENTS.md).
+#
+# Regras selecionadas (padrão ruff, críticas e sem ruído estético):
+#   E4  — espaçamento de imports
+#   E7  — problemas em statements (comparações == None, def duplicada etc.)
+#   E9  — erros de runtime (sintaxe)
+#   F   — pyflakes: imports não usados, nomes indefinidos, f-strings quebradas
+#
+# Uso: docker compose exec app ruff check .
+#      ./scripts/verificar.sh   (lint + testes, espelho do CI)
+
+target-version = "py311"
+line-length = 88
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
+
+# Código gerado pelo Django não é revisado por lint
+[lint.per-file-ignores]
+"**/migrations/*.py" = ["F401"]

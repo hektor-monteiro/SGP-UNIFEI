@@ -2,7 +2,7 @@ import random
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from apps.core.models import Instituicao, Fomentador, ProcessoSipac
+from apps.core.models import Instituicao, Fomentador
 from apps.projetos.models import Pessoa, Projeto, Proposta
 from apps.bolsas.models import ModalidadeBolsa, Bolsa
 from apps.editais.models import Edital, Avaliacao, CriterioAvaliacao
@@ -32,25 +32,25 @@ class Command(BaseCommand):
         self.stdout.write(f'  ✓ {len(projetos)} projetos criados')
 
         self.criar_equipes(projetos, alunos, docentes, externos)
-        self.stdout.write(f'  ✓ Equipes criadas')
+        self.stdout.write('  ✓ Equipes criadas')
 
         bolsas = self.criar_bolsas(projetos, alunos, modalidades, fomentadores)
         self.stdout.write(f'  ✓ {len(bolsas)} bolsas criadas')
 
         self.criar_planos_trabalho(bolsas, alunos)
-        self.stdout.write(f'  ✓ Planos de trabalho criados')
+        self.stdout.write('  ✓ Planos de trabalho criados')
 
         self.criar_relatorios(bolsas, alunos)
-        self.stdout.write(f'  ✓ Relatórios criados')
+        self.stdout.write('  ✓ Relatórios criados')
 
         editais = self.criar_editais(modalidades)
         self.stdout.write(f'  ✓ {len(editais)} editais criados')
 
         self.criar_propostas(editais, docentes)
-        self.stdout.write(f'  ✓ Propostas criadas')
+        self.stdout.write('  ✓ Propostas criadas')
 
         self.criar_comprovantes(bolsas, projetos, alunos, docentes)
-        self.stdout.write(f'  ✓ Comprovantes criados')
+        self.stdout.write('  ✓ Comprovantes criados')
 
         usuarios = self.criar_usuarios_demo(alunos, docentes)
         self.stdout.write(f'  ✓ {len(usuarios)} usuários demo criados')

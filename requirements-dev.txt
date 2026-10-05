@@ -1,0 +1,3 @@
+# Dependências de desenvolvimento (não entram na imagem de produção)
+# Usadas pelo lint local e pelo CI — ver AGENTS.md (Comandos de Testes/Lint).
+ruff==0.16.10
