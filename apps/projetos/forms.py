@@ -4,7 +4,7 @@ from datetime import date
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import Pessoa, Projeto
+from .models import Pessoa, Projeto, gerar_codigo_projeto
 
 # Máximo de projetos sem fomento por coordenador (regra de negócio da DIP)
 MAX_PROJETOS_SEM_FOMENTO = 2
@@ -38,12 +38,32 @@ class ProjetoForm(forms.ModelForm):
         self.fields['coordenador'].empty_label = '— Selecione o docente —'
         self.fields['data_termino'].required = False
         self.fields['descricao'].required = False
-        if not self.instance.pk:
+        # _state.adding: detecção correta de "criação" — o pk do Projeto é
+        # UUID com default e já nasce preenchido (instance.pk nunca é None)
+        if self.instance._state.adding:
             self.fields['data_registro'].initial = date.today()
             self.fields['status'].initial = 'vigente'
+            # Código gerado pelo sistema (próximo sequencial PVDI###-AAAA);
+            # pode ser sobrescrito quando o nº vem de registro externo
+            self.fields['codigo'].required = False
+            self.fields['codigo'].initial = gerar_codigo_projeto()
+            self.fields['codigo'].help_text = (
+                'Deixe em branco para gerar automaticamente '
+                '(formato PVDI###-AAAA).'
+            )
 
     def clean(self):
         cleaned = super().clean()
+
+        # Criação sem código: gera o sequencial único no padrão da DIP
+        codigo = cleaned.get('codigo')
+        if codigo:
+            cleaned['codigo'] = codigo.strip()
+        elif self.instance._state.adding:
+            cleaned['codigo'] = gerar_codigo_projeto(
+                cleaned.get('data_registro'),
+            )
+
         coordenador = cleaned.get('coordenador')
         fomentador = cleaned.get('fomentador')
 

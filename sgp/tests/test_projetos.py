@@ -1,4 +1,5 @@
 """Testes do módulo de Projetos (views, permissões e regra de negócio)."""
+import re
 from datetime import date
 
 from django.contrib.auth.models import User
@@ -260,3 +261,108 @@ class EdicaoValoresTests(TestCase):
         self.projeto.refresh_from_db()
         self.assertEqual(self.projeto.titulo, 'Projeto atualizado')
         self.assertEqual(self.projeto.coordenador, self.docente)
+
+
+class GeracaoCodigoTests(TestCase):
+    """Geração automática de código único no padrão PVDI###-AAAA (§3.1)."""
+
+    def setUp(self):
+        self.docente = Pessoa.objects.create(
+            nome='Docente Código', email='cod@unifei.edu.br', tipo='docente',
+        )
+        self.user = _criar_usuario('tec_cod', Perfil.PERFIL_TECNICO)
+        self.dados = {
+            'titulo': 'Projeto com código gerado',
+            'data_registro': date.today().isoformat(),
+            'data_inicio': date.today().isoformat(),
+            'status': 'vigente',
+            'coordenador': self.docente.pk,
+        }
+
+    def _post(self, **extras):
+        """POST autenticado como técnico em /projetos/novo/."""
+        self.client.login(username='tec_cod', password='x')
+        return self.client.post(
+            reverse('projeto_novo'), {**self.dados, **extras},
+        )
+
+    def test_form_exibe_sugestao_de_codigo(self):
+        """GET do formulário: campo opcional já com sugestão gerada."""
+        self.client.login(username='tec_cod', password='x')
+        response = self.client.get(reverse('projeto_novo'))
+        campo = response.context['form'].fields['codigo']
+        self.assertFalse(campo.required)
+        self.assertRegex(campo.initial, r'^PVDI\d{3,}-\d{4}$')
+
+    def test_cria_sem_codigo_gera_sequencial(self):
+        """POST sem código → sistema gera PVDI###-AAAA com o ano do registro."""
+        response = self._post()
+        self.assertEqual(response.status_code, 302)
+        projeto = Projeto.objects.get(titulo='Projeto com código gerado')
+        self.assertRegex(projeto.codigo, r'^PVDI\d{3,}-\d{4}$')
+        self.assertTrue(projeto.codigo.endswith(f'-{date.today().year}'))
+
+    def test_codigos_consecutivos_unicos_e_sequenciais(self):
+        """Dois projetos seguidos recebem sequenciais distintos (n+1)."""
+        self._post(titulo='Primeiro projeto')
+        self._post(titulo='Segundo projeto')
+        codigos = Projeto.objects.filter(
+            titulo__in=['Primeiro projeto', 'Segundo projeto'],
+        ).values_list('codigo', flat=True)
+        numeros = sorted(
+            int(re.match(r'^PVDI(\d+)', c).group(1)) for c in codigos
+        )
+        self.assertEqual(len(numeros), 2)
+        self.assertEqual(numeros[1], numeros[0] + 1)
+
+    def test_pula_sequencial_ja_existente(self):
+        """Maior número existente no padrão define o próximo (sem colisão)."""
+        Projeto.objects.create(
+            codigo='PVDI050-2026',
+            titulo='Projeto histórico',
+            data_registro=date.today(), data_inicio=date.today(),
+            coordenador=self.docente,
+        )
+        self._post()
+        projeto = Projeto.objects.get(titulo='Projeto com código gerado')
+        self.assertEqual(projeto.codigo, 'PVDI051-2026')
+
+    def test_ano_do_codigo_segue_data_registro(self):
+        """Ano do código = ano da data de registro, não o ano corrente."""
+        self._post(data_registro='2024-06-01')
+        projeto = Projeto.objects.get(titulo='Projeto com código gerado')
+        self.assertEqual(projeto.codigo, 'PVDI001-2024')
+
+    def test_codigo_explicito_e_preservado(self):
+        """Código digitado (registro externo) é mantido, não substituído."""
+        self._post(codigo='PVDI999-2019')
+        self.assertTrue(
+            Projeto.objects.filter(codigo='PVDI999-2019').exists(),
+        )
+
+    def test_edicao_com_codigo_em_branco_e_rejeitada(self):
+        """Na edição o campo continua obrigatório e nunca é regenerado."""
+        self._post(codigo='PVDI500-2026', titulo='Para editar')
+        projeto = Projeto.objects.get(codigo='PVDI500-2026')
+        response = self.client.post(
+            reverse('projeto_editar', kwargs={'pk': projeto.pk}),
+            {**self.dados, 'codigo': '', 'titulo': 'Editado'},
+        )
+        self.assertEqual(response.status_code, 200)  # volta com erro
+        projeto.refresh_from_db()
+        self.assertEqual(projeto.codigo, 'PVDI500-2026')
+        self.assertEqual(projeto.titulo, 'Para editar')
+
+    def test_codigo_duplicado_rejeitado(self):
+        """Unicidade mantida: código igual a projeto existente é erro."""
+        Projeto.objects.create(
+            codigo='PVDI060-2026', titulo='Existe',
+            data_registro=date.today(), data_inicio=date.today(),
+            coordenador=self.docente,
+        )
+        response = self._post(codigo='PVDI060-2026')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'já existe')
+        self.assertEqual(
+            Projeto.objects.filter(codigo='PVDI060-2026').count(), 1,
+        )

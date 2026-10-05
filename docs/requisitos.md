@@ -63,6 +63,7 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Bolsas são cotas institucionais alocadas pelos fomentadores
 
 ### 3.4 Projeto
+- Código único **gerado pelo sistema** no padrão `PVDI###-AAAA` (sequencial global + ano de registro; pode ser sobrescrito)
 - Pode ter fomento (recursos para pesquisa) ou não
 - Pode ter múltiplas bolsas de fomentadores distintos
 - Pode ter múltiplos membros (internos e externos)

@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils import timezone
+import re
 import uuid
 from apps.core.models import TimeStampedModel, Instituicao, Fomentador, ProcessoSipac
 
@@ -55,6 +57,29 @@ class Projeto(TimeStampedModel):
 
     def __str__(self):
         return f'{self.codigo} - {self.titulo[:50]}'
+
+
+# Padrão dos códigos existentes na DIP: PVDI + sequencial + ano de registro
+PADRAO_CODIGO_PROJETO = re.compile(r'^PVDI(\d+)-(\d{4})$')
+
+
+def gerar_codigo_projeto(data_referencia=None) -> str:
+    """Gera o próximo código de projeto no padrão PVDI###-AAAA.
+
+    O número é o maior sequencial já usado no padrão (qualquer ano) mais 1,
+    com mínimo de 3 dígitos; o ano é o da data de registro informada ou da
+    data corrente. A unicidade também é garantida pelo banco
+    (`Projeto.codigo` é único) — a janela de corrida entre a validação e o
+    INSERT é coberta pela constraint.
+    """
+    maior_numero = 0
+    for codigo in Projeto.objects.values_list('codigo', flat=True):
+        correspondencia = PADRAO_CODIGO_PROJETO.match(codigo)
+        if correspondencia:
+            maior_numero = max(maior_numero, int(correspondencia.group(1)))
+    data = data_referencia or timezone.localdate()
+    return f'PVDI{maior_numero + 1:03d}-{data.year}'
+
 
 class Proposta(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
