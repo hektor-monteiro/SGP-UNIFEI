@@ -111,7 +111,8 @@
 | id | UUID | PK | Identificador único |
 | codigo | VARCHAR(50) | Sim | Código do projeto (ex: PVDI494-2024) |
 | titulo | VARCHAR(500) | Sim | Título do projeto |
-| descricao | TEXT | Não | Descrição detalhada |
+| resumo | TEXT (1000) | Sim no formulário | Texto curto exibido na tela e usado na busca (`?q=` em código/título/resumo). Substitui a antiga `descricao` |
+| arquivo_pdf | VARCHAR (upload) | Não¹ | Documento do projeto em PDF (`uploads/projetos/AAAA/MM/`), validado no servidor (extensão, tamanho ≤ 15 MB, assinatura `%PDF-`) |
 | data_registro | DATE | Sim | Data de registro na DIP |
 | data_inicio | DATE | Sim | Data de início |
 | data_termino | DATE | Não | Data de término (pode ser prorrogado) |
@@ -135,6 +136,11 @@
 ¹ Obrigatório no formulário (cadeia coerente GA → Área → Subárea); nulo no
 banco por compatibilidade com registros antigos à migração. A ficha **ODS**
 (≥ 1 item) é uma relação N:N — ver §2.16.
+
+² O PDF é obrigatório **apenas na submissão** para avaliação por pares
+(`POST /projetos/<pk>/submeter/`); criar e editar fica livre. O arquivo é
+entregue por rota autenticada `GET /projetos/<pk>/arquivo/` (mesma
+permissão do detalhe) — nunca por `/media/` público (LGPD).
 
 ---
 
@@ -216,15 +222,17 @@ banco por compatibilidade com registros antigos à migração. A ficha **ODS**
 | bolsa_id | UUID | FK → Bolsa | Bolsa vinculada |
 | aluno_id | UUID | FK → Pessoa | Aluno responsável |
 | titulo | VARCHAR(255) | Sim | Título do plano |
-| descricao | TEXT | Não | Descrição do plano |
-| objetivos | TEXT | Não | Objetivos |
-| metodologia | TEXT | Não | Metodologia |
-| cronograma | JSONB | Não | Cronograma de atividades |
+| resumo | TEXT (1000) | Sim no formulário | Texto curto exibido na tela e usado na busca. Substitui `descricao`/`objetivos`/`metodologia`/`cronograma` |
+| arquivo_pdf | VARCHAR (upload) | Não¹ | Plano completo em PDF (`uploads/planos/AAAA/MM/`) — obrigatório para sair de `rascunho` |
 | status | ENUM | Sim | `rascunho`, `submetido`, `aprovado`, `reprovado` |
 | data_submissao | TIMESTAMP | Não | Data de submissão |
 | data_aprovacao | TIMESTAMP | Não | Data de aprovação |
 | criado_em | TIMESTAMP | Sim | Data de criação |
 | atualizado_em | TIMESTAMP | Sim | Data de última atualização |
+
+¹ Redação completa vive no PDF; o sistema guarda apenas metadados +
+`resumo`. Entrega por `GET /planos/<pk>/arquivo/` (aluno só vê os
+próprios planos) — nunca por `/media/` público (LGPD).
 
 ---
 
@@ -237,7 +245,8 @@ banco por compatibilidade com registros antigos à migração. A ficha **ODS**
 | aluno_id | UUID | FK → Pessoa | Aluno responsável |
 | tipo | ENUM | Sim | `parcial`, `final` |
 | titulo | VARCHAR(255) | Sim | Título do relatório |
-| conteudo | TEXT | Não | Conteúdo do relatório |
+| resumo | TEXT (1000) | Sim no formulário | Texto curto exibido na tela e usado na busca. Substituiu `conteudo` |
+| arquivo_pdf | VARCHAR (upload) | Não¹ | Relatório completo em PDF (`uploads/relatorios/AAAA/MM/`) — obrigatório para submeter |
 | periodo_inicio | DATE | Não | Início do período |
 | periodo_fim | DATE | Não | Fim do período |
 | status | ENUM | Sim | `rascunho`, `submetido`, `avaliado`, `aprovado`, `reprovado` |
@@ -248,6 +257,10 @@ banco por compatibilidade com registros antigos à migração. A ficha **ODS**
 | avaliado_por | UUID | FK → Pessoa | Avaliador |
 | criado_em | TIMESTAMP | Sim | Data de criação |
 | atualizado_em | TIMESTAMP | Sim | Data de última atualização |
+
+¹ Redação completa vive no PDF (link exibido no detalhe **e** na tela de
+avaliação). Entrega por `GET /relatorios/<pk>/arquivo/` com a mesma
+permissão do detalhe — nunca por `/media/` público (LGPD).
 
 ---
 

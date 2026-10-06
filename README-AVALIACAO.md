@@ -74,15 +74,23 @@ Marque o que foi testado e anote o que falhar:
 - [ ] **Login/logout** com `aluno1` e `docente1`; painel conforme o perfil
 - [ ] **Projetos**: lista com filtros, detalhe, criação (docente/técnico+);
       edição pelo coordenador ou técnico+; aluno só enxerga projetos dos
-      quais participa ou tem bolsa
+      quais participa ou tem bolsa; busca por `?q=` em **código, título ou
+      resumo**
+- [ ] **Documentos em PDF** (projetos, planos e relatórios): campo
+      `Documento (PDF)` no formulário; **envio/submissão bloqueados sem o
+      PDF** com mensagem clara; detalhe exibe o **resumo** e o link
+      **"Abrir o PDF"** (rota autenticada — não é `/media/` público);
+      tentar anexar um arquivo que não seja PDF é recusado no servidor
 - [ ] **Equipes** (no detalhe do projeto): técnico+ ou coordenador adiciona,
       edita, encerra e exclui membros; aluno não vê os botões
 - [ ] **Bolsas**: aluno vê apenas a própria; regra de "1 bolsa ativa" ao editar
 - [ ] **Planos de trabalho**: aluno cria/edita conforme o fluxo de status;
-      docente vê os planos pelo painel e pelo projeto
-- [ ] **Relatórios do aluno**: criação/edição conforme status, submissão,
-      nota do orientador/técnico com aprovação automática pela nota mínima,
-      apenas um relatório final por bolsa
+      docente vê os planos pelo painel e pelo projeto; status ≠ rascunho
+      exige o PDF anexado
+- [ ] **Relatórios do aluno**: criação/edição conforme status, submissão
+      (exige PDF), nota do orientador/técnico com aprovação automática pela
+      nota mínima, apenas um relatório final por bolsa; a **tela de
+      avaliação mostra o PDF** a ser lido
 - [ ] **Editais**: técnico cria (nascendo *rascunho*), só diretor/publica;
       ações do fluxo conforme perfil (iniciar/encerrar/cancelar)
 - [ ] **Propostas**: aluno/docente submetem a edital aberto; técnico vê todas,

@@ -70,8 +70,9 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | `/projetos/` | visualizar | autenticado | aluno: só projetos onde é membro ou tem bolsa (sem Pessoa → vazio) |
 | `/projetos/novo/` | criar | docente ou téc+ | aluno → 403; docente vira coordenador |
 | `/projetos/<pk>/` | visualizar | autenticado | aluno precisa de vínculo (membro ou bolsa) → senão 403 |
-| `/projetos/<pk>/editar/` | editar | téc+ **ou** coordenador do projeto | coordenador não altera o campo coordenador |
-| `/projetos/<pk>/submeter/` (POST) | enviar para avaliação por pares | **coordenador do projeto ou téc+** | só de `nao_submetido`; reenvio bloqueado; aluno/docente-de-fora → 403; nota automática (financiamento externo) → envio dispensado |
+| `/projetos/<pk>/editar/` | editar | téc+ **ou** coordenador do projeto | coordenador não altera o campo coordenador; `resumo` obrigatório; aceita upload do PDF (opcional) |
+| `/projetos/<pk>/arquivo/` | baixar o PDF | autenticado | **mesma permissão do detalhe** (aluno com vínculo); sem arquivo → 404; entrega `application/pdf` + `nosniff`, nunca por `/media/` público |
+| `/projetos/<pk>/submeter/` (POST) | enviar para avaliação por pares | **coordenador do projeto ou téc+** | só de `nao_submetido`; **exige PDF anexado e resumo** (erro claro + nada muda); reenvio bloqueado; aluno/docente-de-fora → 403; nota automática (financiamento externo) → envio dispensado |
 
 ### 3.3 Equipes (`apps/equipes/`)
 
@@ -100,12 +101,14 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 |---|---|---|---|
 | `/planos/` | visualizar | autenticado | aluno: só os próprios |
 | `/planos/novo/` | criar | com Perfil | aluno: própria bolsa sem plano; docente: bolsas coordenadas; téc+: todas |
-| `/planos/<pk>/editar/` | editar | téc+, coordenador ou **aluno dono** | aluno dono só em rascunho/reprovado e **não muda status** |
+| `/planos/<pk>/editar/` | editar | téc+, coordenador ou **aluno dono** | aluno dono só em rascunho/reprovado e **não muda status**; `resumo` obrigatório; **status ≠ rascunho exige PDF** |
+| `/planos/<pk>/arquivo/` | baixar o PDF | autenticado | **aluno só o próprio plano** → senão 403; sem arquivo → 404 |
 | `/relatorios/` | visualizar | autenticado | aluno: só os próprios; docente: editáveis/avaliáveis só os coordenados |
 | `/relatorios/novo/` | criar | com Perfil | mesmo escopo de bolsas (aluno próprio / docente coordenadas / téc+ todas) |
-| `/relatorios/<pk>/editar/` | editar | téc+ sempre; aluno próprio e orientador em rascunho/reprovado | status final trava edição |
-| `/relatorios/<pk>/submeter/` (POST) | editar | dono, orientador ou téc+ | limpa avaliação anterior |
-| `/relatorios/<pk>/avaliar/` | editar | **téc+ ou orientador ou co-orientador ativo** (função em `MembroEquipe`) | exige status `submetido`; nota ≥ mínima → aprovação automática |
+| `/relatorios/<pk>/editar/` | editar | téc+ sempre; aluno próprio e orientador em rascunho/reprovado | status final trava edição; `resumo` obrigatório; aceita upload do PDF (opcional) |
+| `/relatorios/<pk>/arquivo/` | baixar o PDF | autenticado | **aluno só o próprio relatório** → senão 403; sem arquivo → 404 |
+| `/relatorios/<pk>/submeter/` (POST) | editar | dono, orientador ou téc+ | **exige PDF anexado** (erro claro + nada muda); limpa avaliação anterior |
+| `/relatorios/<pk>/avaliar/` | editar | **téc+ ou orientador ou co-orientador ativo** (função em `MembroEquipe`) | exige status `submetido`; exibe o **PDF do relatório** + resumo; nota ≥ mínima → aprovação automática |
 | `/indicadores/` e `/indicadores/csv/` | visualizar | **téc+** (`perfil_required`) | |
 
 ### 3.6 Editais, propostas e avaliação (`apps/editais/`)

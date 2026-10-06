@@ -228,6 +228,27 @@ Antes de considerar qualquer tarefa concluída:
   autopreenchimento com um único resultado). Usar em **qualquer** campo que
   liste pessoas — ex.: `avaliador`, `coordenador`, `aluno`, `pessoa`
 
+### Upload de documentos (PDF)
+- **Campo de arquivo**: `FileField(upload_to='uploads/<tipo>/AAAA/MM/', blank=True, validators=[validar_pdf])`
+  em `apps/core/validators.py` (extensão `.pdf` + assinatura `%PDF-` +
+  limite de 15 MB) + `campo_arquivo = 'arquivo_pdf'` na classe, que deve
+  herdar `ModeloComArquivo` (`apps/core/models.py`) para apagar o arquivo
+  substituído/órfão do disco
+- **`request.FILES`**: toda view que usa formulário com arquivo precisa de
+  `Form(request.POST, request.FILES, ...)` e o `<form>` precisa de
+  `enctype="multipart/form-data"` — sem isso o upload é **silenciosamente
+  ignorado**
+- **Nunca servir `/media/`**: usar `servir_pdf(caminho)`
+  (`apps/core/arquivos.py`) em uma rota autenticada que aplique a mesma
+  permissão da tela de detalhe (LGPD). Arquivos ficam em `MEDIA_ROOT`
+  (volume `media_data` no `docker-compose.prod.yml`; já no `.gitignore` e
+  `.dockerignore`)
+- **Testes de upload**: arquivo vai **dentro do dict de dados** do client
+  do Django (`data['arquivo_pdf'] = SimpleUploadedFile(...)`, não há
+  parâmetro `files=`); `sgp/tests/arquivos_teste.py` traz o mixin
+  `MediaTemporariaMixin` (evita gravar em `media/`), `PDF_EXEMPLO` e
+  `anexar_pdf(objeto)`
+
 ---
 
 ## TODOs Pendentes

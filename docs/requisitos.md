@@ -66,6 +66,9 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Bolsas são cotas institucionais alocadas pelos fomentadores
 
 ### 3.4 Projeto
+- **Documento em PDF + `resumo`**: a redação completa vai em upload de PDF
+  e o sistema guarda um `resumo` de até 1000 caracteres para a busca;
+  ambos obrigatórios para **enviar à avaliação por pares** (§3.17)
 - Código único **gerado pelo sistema** no padrão `PVDI###-AAAA` (sequencial global + ano de registro; pode ser sobrescrito)
 - **ODS obrigatório**: ao menos um dos 17 Objetivos de Desenvolvimento Sustentável (checkboxes)
 - **Área de Conhecimento obrigatória** conforme a tabela do CNPq: Grande Área → Área → Subárea (cascata com validação de coerência)
@@ -115,11 +118,15 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 
 ### 3.9 Plano de Trabalho
 - Vinculado ao aluno e ao projeto
+- Metadados + `resumo` no sistema; **redação completa em PDF anexado** —
+  obrigatório para sair de `rascunho` (submissão) (§3.17)
 
 ### 3.10 Relatório
 - Parcial ou final
 - Vinculado ao aluno e ao projeto
 - Deve gerar indicadores para prestação de contas
+- `resumo` obrigatório no formulário e **PDF anexado obrigatório para
+  submeter** para avaliação (§3.17)
 
 ### 3.11 Comprovante
 - Emitido a partir de dados do sistema
@@ -162,6 +169,37 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Nota quantitativa (ex: 9.8, 9.1, 8.5)
 - Observações sobre entrega de relatório
 - Vinculada ao projeto e ao membro avaliador
+
+### 3.17 Documentos em PDF (Projetos, Planos de Trabalho e Relatórios)
+- **Redação completa em PDF, dados estruturados no sistema**: nos três
+  documentos o usuário preenche os metadados (título, período etc.), um
+  **`resumo`** de até 1000 caracteres **no lugar dos campos longos
+  antigos** (`descricao` do projeto; `descricao`/`objetivos`/
+  `metodologia`/`cronograma` do plano; `conteudo` do relatório) e faz o
+  **upload do PDF** com a redação completa
+- **`resumo` obrigatório** (é o texto que alimenta a busca por
+  `?q=` em código/título/resumo nas listas de projetos, planos e
+  relatórios)
+- **PDF obrigatório só na submissão**:
+  - Projeto: bloqueia `POST /projetos/<pk>/submeter/` (avaliação por pares)
+  - Plano: bloqueia mudança de status para fora de `rascunho` no formulário
+  - Relatório: bloqueia `POST /relatorios/<pk>/submeter/`
+  - Criar e editar permanece livre (rascunho sem PDF)
+- **Validação no servidor** (sem depender do navegador): extensão `.pdf`,
+  **assinatura mágica `%PDF-`** no conteúdo e limite de **15 MB**
+  (`apps/core/validators.validar_pdf`)
+- **Entrega por view autenticada** (`/projetos/<pk>/arquivo/`,
+  `/planos/<pk>/arquivo/`, `/relatorios/<pk>/arquivo/`) aplicando a mesma
+  permissão da tela de detalhe — **nunca `/media/` público** (os PDFs
+  podem conter dados pessoais; §6). O detalhe e a tela de avaliação
+  exibem o link; o avaliador lê o documento na própria avaliação
+- **Persistência e higiene**: `MEDIA_ROOT` em volume Docker nomeado
+  (`media_data:/app/media`, fora do código e do `.dockerignore`); ao
+  substituir um arquivo o anterior é apagado do disco, e o mesmo ocorre
+  na exclusão do registro (`ModeloComArquivo` em `apps/core/models.py`)
+- **Dados de demonstração**: o `populate_demo` anexa PDFs gerados localmente
+  (`apps/core/pdf_demo.py`, sem dependências novas) a projetos e aos
+  planos/relatórios submetidos
 
 ---
 
