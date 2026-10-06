@@ -5,7 +5,14 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 import re
 import uuid
-from apps.core.models import TimeStampedModel, Instituicao, Fomentador, ProcessoSipac
+from apps.core.models import (
+    Instituicao,
+    Fomentador,
+    ModeloComArquivo,
+    ProcessoSipac,
+    TimeStampedModel,
+)
+from apps.core.validators import validar_pdf
 
 class Pessoa(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -98,11 +105,32 @@ class SubareaConhecimento(TimeStampedModel):
         return self.nome
 
 
-class Projeto(TimeStampedModel):
+class Projeto(TimeStampedModel, ModeloComArquivo):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     codigo = models.CharField(max_length=50, unique=True)
     titulo = models.CharField(max_length=500)
-    descricao = models.TextField(blank=True)
+    # Resumo: substitui a antiga descrição — texto curto que alimenta a
+    # busca do sistema. A redação completa fica no PDF anexado abaixo.
+    resumo = models.TextField(
+        max_length=1000,
+        blank=True,
+        verbose_name='Resumo',
+        help_text=(
+            'Texto curto (até 1000 caracteres) exibido na tela e usado '
+            'na busca do sistema.'
+        ),
+    )
+    arquivo_pdf = models.FileField(
+        upload_to='uploads/projetos/%Y/%m/',
+        blank=True,
+        validators=[validar_pdf],
+        verbose_name='Documento (PDF)',
+        help_text=(
+            'Projeto completo em PDF (até 15 MB). Obrigatório para '
+            'enviar à avaliação por pares.'
+        ),
+    )
+    campo_arquivo = 'arquivo_pdf'
     data_registro = models.DateField()
     data_inicio = models.DateField()
     data_termino = models.DateField(null=True, blank=True)

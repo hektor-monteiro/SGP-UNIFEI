@@ -34,9 +34,20 @@
         <tr><th>Grande Área</th><td>{{ projeto.grande_area|default:"—" }}</td></tr>
         <tr><th>Área</th><td>{{ projeto.area|default:"—" }}</td></tr>
         <tr><th>Subárea</th><td>{{ projeto.subarea|default:"—" }}</td></tr>
-        {% if projeto.descricao %}
-        <tr><th>Descrição</th><td>{{ projeto.descricao|linebreaksbr }}</td></tr>
+        {% if projeto.resumo %}
+        <tr><th>Resumo</th><td>{{ projeto.resumo|linebreaksbr }}</td></tr>
         {% endif %}
+        <tr>
+            <th>Documento (PDF)</th>
+            <td>
+                {% if projeto.arquivo_pdf %}
+                    <a href="{% url 'projeto_arquivo' projeto.pk %}" style="color:#003366;">Abrir o PDF do projeto</a>
+                    <span style="color:#666; font-size:0.85rem;">(exibido em uma nova aba)</span>
+                {% elif pode_editar %}
+                    <span style="color:#666;">Nenhum PDF anexado — anexe em "Editar" antes de enviar à avaliação.</span>
+                {% else %}—{% endif %}
+            </td>
+        </tr>
     </table>
 </div>
 

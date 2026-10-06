@@ -7,8 +7,24 @@ do objeto (LGPD e perfis do sistema).
 """
 from pathlib import Path
 
+from django.core.files.storage import default_storage
 from django.http import FileResponse, Http404
 from django.utils.text import get_valid_filename
+
+
+def apagar_arquivo(nome: str) -> None:
+    """Remove do storage o arquivo enviado `nome` (substituído ou excluído).
+
+    Silencioso por design: um arquivo que já não existe no disco não pode
+    quebrar a exclusão do registro.
+    """
+    if not nome:
+        return
+    try:
+        if default_storage.exists(nome):
+            default_storage.delete(nome)
+    except OSError:
+        pass
 
 
 def servir_pdf(caminho, nome_original=None) -> FileResponse:

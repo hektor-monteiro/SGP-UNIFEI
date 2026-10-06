@@ -9,10 +9,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
+from apps.core.arquivos import servir_pdf
 from apps.core.models import Perfil
 from apps.core.permissions import (
     perfil_de as _perfil_de,
@@ -32,6 +34,25 @@ def _pode_editar(user, projeto) -> bool:
     if perfil and perfil.pessoa and projeto.coordenador_id == perfil.pessoa.id:
         return True
     return False
+
+
+def _pode_ver(user, projeto) -> None:
+    """Levanta PermissionDenied se o usuário não pode ver o projeto.
+
+    Aluno só vê projetos dos quais participa (membro ou bolsista);
+    demais perfis veem qualquer projeto. Usada pelo detalhe e pela
+    entrega do PDF — o arquivo obedece à mesma regra da tela.
+    """
+    perfil = _perfil_de(user)
+    if perfil and perfil.perfil == Perfil.PERFIL_ALUNO:
+        if not perfil.pessoa:
+            raise PermissionDenied
+        participa = (
+            projeto.membros.filter(pessoa=perfil.pessoa).exists()
+            or projeto.bolsas.filter(aluno=perfil.pessoa).exists()
+        )
+        if not participa:
+            raise PermissionDenied
 
 
 def _visiveis_para(user):
@@ -64,7 +85,13 @@ def lista(request):
     if instituto:
         projetos = projetos.filter(instituicao__sigla=instituto)
     if busca:
-        projetos = projetos.filter(titulo__icontains=busca)
+        # Busca por código, título ou resumo (resumo é o texto curto
+        # que alimenta a busca do sistema)
+        projetos = projetos.filter(
+            Q(codigo__icontains=busca)
+            | Q(titulo__icontains=busca)
+            | Q(resumo__icontains=busca)
+        )
 
     from apps.core.models import Instituicao
 
@@ -101,15 +128,7 @@ def detalhe(request, pk):
 
     perfil = _perfil_de(request.user)
     # Aluno só vê projetos dos quais participa: como membro ou com bolsa nele
-    if perfil and perfil.perfil == Perfil.PERFIL_ALUNO:
-        if not perfil.pessoa:
-            raise PermissionDenied
-        participa = (
-            projeto.membros.filter(pessoa=perfil.pessoa).exists()
-            or projeto.bolsas.filter(aluno=perfil.pessoa).exists()
-        )
-        if not participa:
-            raise PermissionDenied
+    _pode_ver(request.user, projeto)
 
     contexto = {
         'projeto': projeto,
@@ -140,6 +159,21 @@ def detalhe(request, pk):
 
 
 @login_required
+@never_cache
+def arquivo(request, pk):
+    """Entrega o PDF do projeto com as mesmas permissões do detalhe.
+
+    Nunca servimos /media publicamente: o arquivo obedece à visibilidade
+    do projeto (aluno participante) e é emitido como application/pdf.
+    """
+    projeto = get_object_or_404(Projeto, pk=pk)
+    _pode_ver(request.user, projeto)
+    if not projeto.arquivo_pdf:
+        raise Http404('Este projeto não tem documento anexado.')
+    return servir_pdf(projeto.arquivo_pdf.path)
+
+
+@login_required
 @require_POST
 def submeter(request, pk):
     """Envia o projeto para avaliação por pares (§3.4).
@@ -164,6 +198,21 @@ def submeter(request, pk):
         messages.error(
             request,
             'Este projeto já foi enviado para avaliação por pares.',
+        )
+        return redirect('projeto_detalhe', pk=projeto.pk)
+    # Documento em PDF obrigatório para a submissão (§3.1): é ele que os
+    # avaliadores leem; o resumo fica no sistema para a busca.
+    if not projeto.arquivo_pdf:
+        messages.error(
+            request,
+            'Anexe o PDF do projeto (campo "Documento (PDF)") antes de '
+            'enviar para avaliação por pares.',
+        )
+        return redirect('projeto_detalhe', pk=projeto.pk)
+    if not projeto.resumo.strip():
+        messages.error(
+            request,
+            'Preencha o resumo do projeto antes de enviar para avaliação.',
         )
         return redirect('projeto_detalhe', pk=projeto.pk)
 
@@ -192,7 +241,7 @@ def novo(request):
     )
 
     if request.method == 'POST':
-        form = ProjetoForm(request.POST)
+        form = ProjetoForm(request.POST, request.FILES)
         if docente_vinculado:
             # Docente sempre coordena seu próprio projeto (campo desabilitado)
             form.fields['coordenador'].disabled = True
@@ -229,7 +278,7 @@ def editar(request, pk):
     )
 
     if request.method == 'POST':
-        form = ProjetoForm(request.POST, instance=projeto)
+        form = ProjetoForm(request.POST, request.FILES, instance=projeto)
     else:
         form = ProjetoForm(instance=projeto)
 

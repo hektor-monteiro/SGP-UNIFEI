@@ -1,12 +1,61 @@
 from django.db import models
 import uuid
 
+from apps.core.arquivos import apagar_arquivo
+
 class TimeStampedModel(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True
+
+
+class ModeloComArquivo(models.Model):
+    """Mixin para modelos com campo de upload (FileField).
+
+    O Django não apaga o arquivo do disco quando ele é substituído nem
+    quando o registro é excluído; este mixin cuida dos dois casos para
+    não deixar PDFs órfãos em MEDIA_ROOT. A classe concreta declara o
+    campo: `campo_arquivo = 'arquivo_pdf'`.
+    """
+
+    campo_arquivo = ''
+
+    class Meta:
+        abstract = True
+
+    def _nome_arquivo_atual(self) -> str:
+        """Nome do arquivo na instância em memória ('' se não houver)."""
+        if not self.campo_arquivo:
+            return ''
+        arquivo = getattr(self, self.campo_arquivo, None)
+        return arquivo.name if arquivo else ''
+
+    def _nome_arquivo_gravado(self) -> str:
+        """Nome do arquivo já persistido no banco (para comparar no save)."""
+        if not self.campo_arquivo or not self.pk:
+            return ''
+        gravado = (
+            type(self).objects.filter(pk=self.pk)
+            .values_list(self.campo_arquivo, flat=True).first()
+        )
+        return gravado or ''
+
+    def save(self, *args, **kwargs):
+        """Persiste e remove o arquivo substituído (se houver)."""
+        anterior = self._nome_arquivo_gravado()
+        super().save(*args, **kwargs)
+        atual = self._nome_arquivo_atual()
+        if anterior and anterior != atual:
+            apagar_arquivo(anterior)
+
+    def delete(self, *args, **kwargs):
+        """Apaga o registro e o arquivo associado."""
+        atual = self._nome_arquivo_atual()
+        super().delete(*args, **kwargs)
+        if atual:
+            apagar_arquivo(atual)
 
 class Instituicao(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

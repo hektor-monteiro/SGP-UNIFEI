@@ -17,6 +17,7 @@ from apps.bolsas.models import Indicacao, ModalidadeBolsa
 from apps.editais.models import Avaliacao, CriterioAvaliacao, Edital
 from apps.equipes.models import MembroEquipe
 from apps.projetos.models import Pessoa, Projeto, Proposta
+from sgp.tests.arquivos_teste import MediaTemporariaMixin, anexar_pdf
 
 
 def _criar_usuario(username, perfil, com_pessoa=True):
@@ -34,10 +35,11 @@ def _criar_usuario(username, perfil, com_pessoa=True):
     return user
 
 
-class BaseAvaliacaoProjetoTests(TestCase):
+class BaseAvaliacaoProjetoTests(MediaTemporariaMixin, TestCase):
     """Fixtures comuns: projeto coordenado pelo docente, equipe e usuários."""
 
     def setUp(self):
+        super().setUp()
         hoje = localdate()
         self.docente_coord = _criar_usuario('doc_avp', Perfil.PERFIL_DOCENTE)
         self.docente_fora = _criar_usuario('doc_avp2', Perfil.PERFIL_DOCENTE)
@@ -50,10 +52,13 @@ class BaseAvaliacaoProjetoTests(TestCase):
         self.projeto = Projeto.objects.create(
             codigo='PVDI999-2026',
             titulo='Projeto da avaliação por pares',
+            resumo='Projeto submetido à avaliação por pares de docentes.',
             data_registro=hoje,
             data_inicio=hoje - timedelta(days=30),
             coordenador=self.pessoa_coord,
         )
+        # Documento em PDF é exigido na submissão para avaliação (§3.1)
+        anexar_pdf(self.projeto)
         # Membro da equipe: não pode ser alocado como avaliador
         self.membro = Pessoa.objects.create(
             nome='Membro da Equipe', email='membro@avp.test', tipo='aluno',

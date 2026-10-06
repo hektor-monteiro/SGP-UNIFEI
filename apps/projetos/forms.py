@@ -25,7 +25,7 @@ class ProjetoForm(BuscaNomeMixin, forms.ModelForm):
     class Meta:
         model = Projeto
         fields = [
-            'codigo', 'titulo', 'descricao', 'data_registro',
+            'codigo', 'titulo', 'resumo', 'arquivo_pdf', 'data_registro',
             'data_inicio', 'data_termino', 'status',
             'fomentador', 'recursos_internos', 'recursos_externos',
             'coordenador', 'processo_sipac', 'instituicao',
@@ -37,7 +37,7 @@ class ProjetoForm(BuscaNomeMixin, forms.ModelForm):
             'data_registro': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'data_inicio': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'data_termino': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-            'descricao': forms.Textarea(attrs={'rows': 4}),
+            'resumo': forms.Textarea(attrs={'rows': 3}),
             'ods': forms.CheckboxSelectMultiple(),
         }
 
@@ -48,7 +48,12 @@ class ProjetoForm(BuscaNomeMixin, forms.ModelForm):
         )
         self.fields['coordenador'].empty_label = '— Selecione o docente —'
         self.fields['data_termino'].required = False
-        self.fields['descricao'].required = False
+
+        # Resumo é o texto que alimenta a busca do sistema (§3.1): obrigatório
+        # (o limite de 1000 caracteres vem do max_length do model).
+        self.fields['resumo'].required = True
+        # PDF: obrigatório apenas na submissão para avaliação (view `submeter`)
+        self.fields['arquivo_pdf'].required = False
 
         # Ficha ODS + Área do Conhecimento obrigatórias (decisão de produto)
         self.fields['ods'].required = True

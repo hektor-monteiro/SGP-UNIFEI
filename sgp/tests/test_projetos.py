@@ -163,6 +163,7 @@ class RegraNegocioTests(TestCase):
             **_dados_cnpq(),
             'codigo': 'NOVO-2026',
             'titulo': 'Novo projeto',
+            'resumo': 'Projeto de pesquisa sobre otimização de processos.',
             'data_registro': date.today().isoformat(),
             'data_inicio': date.today().isoformat(),
             'status': 'vigente',
@@ -273,6 +274,7 @@ class EdicaoValoresTests(TestCase):
                 **_dados_cnpq(),
                 'codigo': 'PVDI777-2026',
                 'titulo': 'Projeto atualizado',
+                'resumo': 'Resumo atualizado para a busca do sistema.',
                 'data_registro': '2026-01-10',
                 'data_inicio': '2026-01-15',
                 'data_termino': '2026-12-20',
@@ -297,6 +299,7 @@ class GeracaoCodigoTests(TestCase):
         self.dados = {
             **_dados_cnpq(),
             'titulo': 'Projeto com código gerado',
+            'resumo': 'Resumo para permitir a busca pelo título e código.',
             'data_registro': date.today().isoformat(),
             'data_inicio': date.today().isoformat(),
             'status': 'vigente',
@@ -402,6 +405,7 @@ class OdsAreaConhecimentoTests(TestCase):
         self.user = _criar_usuario('tec_ficha', Perfil.PERFIL_TECNICO)
         self.base = {
             'titulo': 'Projeto com ficha ODS e CNPq',
+            'resumo': 'Resumo do projeto com a ficha ODS preenchida.',
             'data_registro': date.today().isoformat(),
             'data_inicio': date.today().isoformat(),
             'status': 'vigente',
@@ -527,6 +531,7 @@ class OdsAreaConhecimentoTests(TestCase):
             **_dados_cnpq(),
             'codigo': 'PVDI400-2026',
             'titulo': 'Projeto antigo sem ficha',
+            'resumo': 'Resumo agora preenchido junto com a ficha ODS.',
             'data_registro': date.today().isoformat(),
             'data_inicio': date.today().isoformat(),
             'status': 'vigente',
