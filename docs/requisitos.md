@@ -52,6 +52,7 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Pode ser criado sobre demanda (não apenas por calendário)
 - Técnico cria, Diretor/Pro-reitor **aprova** (valida)
 - **Recebe propostas apenas quando "Em Andamento"** e no período informado — após a aprovação, um técnico+ (ou perfil superior) inicia a execução
+- **Propostas = solicitação de cotas**: submetidas por **docente** (projeto + nº de cotas); o aluno é indicado pelo docente só depois que as cotas são aprovadas (§3.5)
 - **Visibilidade**: editais fora de "Em Andamento" não aparecem para perfis abaixo de técnico (aluno e docente veem apenas os em execução; na proposta, a referência ao edital oculto aparece como texto, sem link)
 
 ### 3.2 Modalidade de Bolsa
@@ -78,6 +79,8 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Vinculada a um aluno (1 bolsa ativa por aluno)
 - Vinculada a uma modalidade
 - Vinculada a um fomentador
+- **Fluxo de cotas**: o docente submete a proposta no edital em andamento apontando **projeto + nº de cotas**; após a aprovação na avaliação, ele **indica os alunos** (limite = cotas aprovadas; aluno já com bolsa ativa é bloqueado); o **técnico implementa a bolsa** a partir da indicação, com formulário pré-preenchido (projeto, aluno, modalidade do edital)
+- **Criação manual de bolsa**: somente técnico+ (casos avulsos, fora de edital) — o docente não cria bolsa, ele indica o aluno
 
 ### 3.6 Aluno
 - Cadastro pessoal

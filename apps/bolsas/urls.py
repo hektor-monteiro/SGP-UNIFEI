@@ -9,4 +9,10 @@ urlpatterns = [
     path('bolsas/nova/', views.nova, name='bolsa_nova'),
     path('bolsas/<uuid:pk>/', views.detalhe, name='bolsa_detalhe'),
     path('bolsas/<uuid:pk>/editar/', views.editar, name='bolsa_editar'),
+    path('indicacoes/', views.indicacoes_lista, name='indicacoes_lista'),
+    path(
+        'indicacoes/<uuid:pk>/implementar/',
+        views.indicacao_implementar,
+        name='indicacao_implementar',
+    ),
 ]

@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 
 from apps.projetos.models import Pessoa
 
-from .models import Bolsa, ModalidadeBolsa
+from .models import Bolsa, Indicacao, ModalidadeBolsa
 
 
 class ModalidadeBolsaForm(forms.ModelForm):
@@ -75,3 +75,36 @@ class BolsaForm(forms.ModelForm):
                     'Encerre ou cancele a bolsa atual antes de criar outra.'
                 )
         return cleaned
+
+
+class IndicacaoForm(forms.ModelForm):
+    """Indicação de aluno para cota de proposta aprovada (requisito §3.5).
+
+    Exclui da lista os alunos já indicados na própria proposta e bloqueia
+    quem já possui bolsa ativa (regra de 1 bolsa ativa por aluno).
+    """
+
+    class Meta:
+        model = Indicacao
+        fields = ['aluno']
+
+    def __init__(self, *args, proposta=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.proposta = proposta
+        queryset = Pessoa.objects.filter(tipo='aluno', ativo=True)
+        if proposta is not None:
+            ja_indicados = proposta.indicacoes.values_list('aluno_id', flat=True)
+            queryset = queryset.exclude(pk__in=ja_indicados)
+        self.fields['aluno'].queryset = queryset
+        self.fields['aluno'].empty_label = '— Selecione o aluno —'
+
+    def clean_aluno(self):
+        aluno = self.cleaned_data['aluno']
+        existente = Bolsa.objects.filter(aluno=aluno, status='ativa').first()
+        if existente:
+            raise ValidationError(
+                f'{aluno.nome} já possui bolsa ativa: '
+                f'{existente.modalidade.sigla} em {existente.projeto.codigo}. '
+                'Indique outro aluno para a cota.'
+            )
+        return aluno

@@ -49,21 +49,30 @@ class EditalForm(forms.ModelForm):
 
 
 class PropostaForm(forms.ModelForm):
-    """Formulário de submissão de proposta a um edital.
+    """Formulário de submissão de proposta a um edital (somente docente).
 
-    `edital`, `submetido_por` e `status` são definidos pela view.
+    A proposta solicita cotas de bolsa para um projeto; `edital`,
+    `submetido_por` e `status` são definidos pela view. `projetos`
+    restringe os projetos disponíveis ao docente.
     """
 
     class Meta:
         model = Proposta
-        fields = ['titulo', 'resumo']
+        fields = ['projeto', 'titulo', 'cotas', 'resumo']
         widgets = {
             'resumo': forms.Textarea(attrs={'rows': 6}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, projetos=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['resumo'].required = False
+        # Cotas sem projeto não fazem sentido: obrigatório mesmo no model
+        # aceitando nulo (propostas antigas sem vínculo).
+        self.fields['projeto'].required = True
+        self.fields['projeto'].empty_label = '— Selecione o projeto —'
+        self.fields['cotas'].required = True
+        if projetos is not None:
+            self.fields['projeto'].queryset = projetos
 
 
 class CriterioForm(forms.ModelForm):

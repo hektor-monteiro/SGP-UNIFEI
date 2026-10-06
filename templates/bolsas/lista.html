@@ -8,6 +8,7 @@
         <h2 style="margin:0;">Bolsas ({{ bolsas|length }})</h2>
         <div style="display:flex; gap:15px; align-items:center;">
             {% if pode_gerir %}
+                <a href="{% url 'indicacoes_lista' %}" style="color:#003366;">Indicações de cotas</a>
                 <a href="{% url 'modalidades_lista' %}" style="color:#003366;">Gerenciar modalidades</a>
             {% endif %}
             {% if pode_criar %}

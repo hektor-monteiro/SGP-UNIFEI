@@ -13,9 +13,12 @@ Permissões:
 - Iniciar/Encerrar/Cancelar: técnico+.
 
 Propostas (submissão a editais):
-- Submissão: aluno ou docente, a edital em andamento e no período —
-  edital aprovado (ainda não iniciado) NÃO recebe submissões.
+- Submissão: somente docente, a edital em andamento e no período —
+  a proposta solicita cotas de bolsa para um projeto (§3.5). Aluno não
+  submete: ele é indicado pelo docente após a aprovação das cotas.
 - Detalhe/Edição: submetente ou técnico+; edição somente enquanto "submetida".
+- Indicação de aluno: submetente ou téc+, só em proposta aprovada e
+  enquanto houver cotas disponíveis; implementação da bolsa: só téc+.
 - Listagem no edital: técnico+ vê todas; demais veem apenas as próprias.
 """
 from decimal import Decimal
@@ -23,6 +26,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
@@ -30,8 +34,9 @@ from django.utils.timezone import localdate, now
 
 from apps.core.models import Perfil
 from apps.core.permissions import perfil_de, pode_gerir
+from apps.bolsas.forms import IndicacaoForm
 from apps.bolsas.models import ModalidadeBolsa
-from apps.projetos.models import Proposta
+from apps.projetos.models import Projeto, Proposta
 
 from .forms import (
     AlocacaoForm,
@@ -97,11 +102,25 @@ def _edital_aberto_para_submissao(edital) -> bool:
 
 
 def _pode_submeter(perfil) -> bool:
-    """Aluno e docente submetem propostas (técnico+ apenas gerencia)."""
-    return perfil is not None and perfil.perfil in (
-        Perfil.PERFIL_ALUNO,
-        Perfil.PERFIL_DOCENTE,
-    )
+    """Somente docente submete proposta (solicita cotas, requisito §3.5).
+
+    Aluno não submete: ele é indicado pelo docente quando as cotas são
+    aprovadas no edital. Técnicos+ gerenciam, não submetem.
+    """
+    return perfil is not None and perfil.perfil == Perfil.PERFIL_DOCENTE
+
+
+def _projetos_do_docente(perfil):
+    """Projetos em que o docente pode solicitar cotas.
+
+    Coordena o projeto ou é membro da equipe; sem pessoa vinculada,
+    nenhum projeto.
+    """
+    if perfil is None or perfil.pessoa_id is None:
+        return Projeto.objects.none()
+    return Projeto.objects.filter(
+        Q(coordenador=perfil.pessoa) | Q(membros__pessoa=perfil.pessoa),
+    ).distinct()
 
 
 def _media_ponderada(notas) -> Decimal | None:
@@ -359,7 +378,7 @@ def proposta_nova(request, pk):
         return redirect('edital_detalhe', pk=edital.pk)
 
     if request.method == 'POST':
-        form = PropostaForm(request.POST)
+        form = PropostaForm(request.POST, projetos=_projetos_do_docente(perfil))
         if form.is_valid():
             proposta = form.save(commit=False)
             proposta.edital = edital
@@ -368,7 +387,7 @@ def proposta_nova(request, pk):
             messages.success(request, 'Proposta submetida com sucesso.')
             return redirect('proposta_detalhe', pk=proposta.pk)
     else:
-        form = PropostaForm()
+        form = PropostaForm(projetos=_projetos_do_docente(perfil))
 
     return render(request, 'editais/proposta_form.html', {
         'form': form,
@@ -382,12 +401,19 @@ def proposta_nova(request, pk):
 def proposta_detalhe(request, pk):
     """Detalhe da proposta: submetente, avaliador alocado ou técnico+."""
     proposta = get_object_or_404(
-        Proposta.objects.select_related('edital', 'submetido_por'),
+        Proposta.objects.select_related('edital', 'submetido_por', 'projeto'),
         pk=pk,
     )
     perfil = perfil_de(request.user)
     if not _pode_ver_proposta(request.user, perfil, proposta):
         raise PermissionDenied
+
+    indicadas = proposta.indicacoes.count()
+    cotas = proposta.cotas or 0
+    disponiveis = max(cotas - indicadas, 0)
+    sou_submetente = (
+        perfil is not None and perfil.pessoa_id == proposta.submetido_por_id
+    )
 
     contexto = {
         'proposta': proposta,
@@ -395,6 +421,14 @@ def proposta_detalhe(request, pk):
             proposta.status == 'submetida' and _acesso_a_proposta(perfil, proposta)
         ),
         'pode_gerir': pode_gerir(perfil),
+        'cotas_indicadas': indicadas,
+        'cotas_disponiveis': disponiveis,
+        'pode_indicar': (
+            proposta.status == 'aprovada'
+            and disponiveis > 0
+            and (pode_gerir(perfil) or sou_submetente)
+        ),
+        'pode_implementar': pode_gerir(perfil),
         'avaliacoes': proposta.avaliacoes.select_related(
             'avaliador', 'alocado_por',
         ).order_by('-data_avaliacao'),
@@ -419,18 +453,88 @@ def proposta_editar(request, pk):
         return redirect('proposta_detalhe', pk=proposta.pk)
 
     if request.method == 'POST':
-        form = PropostaForm(request.POST, instance=proposta)
+        form = PropostaForm(
+            request.POST, instance=proposta, projetos=_projetos_ou_todos(perfil),
+        )
         if form.is_valid():
             form.save()
             messages.success(request, 'Proposta atualizada com sucesso.')
             return redirect('proposta_detalhe', pk=proposta.pk)
     else:
-        form = PropostaForm(instance=proposta)
+        form = PropostaForm(instance=proposta, projetos=_projetos_ou_todos(perfil))
 
     return render(request, 'editais/proposta_form.html', {
         'form': form,
         'edital': proposta.edital,
         'titulo': 'Editar proposta',
+    })
+
+
+def _projetos_ou_todos(perfil):
+    """Téc+ escolhem qualquer projeto; docente, só os seus."""
+    if pode_gerir(perfil):
+        return None
+    return _projetos_do_docente(perfil)
+
+
+@login_required
+@never_cache
+def proposta_indicar(request, pk):
+    """Indica aluno para cota de proposta aprovada (submetente ou téc+).
+
+    Regras (§3.5): só proposta com status 'aprovada' e enquanto houver
+    cotas disponíveis (indicadas < solicitadas). O técnico implementa a
+    bolsa depois, a partir da indicação.
+    """
+    proposta = get_object_or_404(
+        Proposta.objects.select_related('edital', 'submetido_por'),
+        pk=pk,
+    )
+    perfil = perfil_de(request.user)
+    sou_submetente = (
+        perfil is not None and perfil.pessoa_id == proposta.submetido_por_id
+    )
+    if not (pode_gerir(perfil) or sou_submetente):
+        raise PermissionDenied
+
+    if proposta.status != 'aprovada':
+        messages.error(
+            request,
+            'Só é possível indicar alunos após a aprovação das cotas no edital.',
+        )
+        return redirect('proposta_detalhe', pk=proposta.pk)
+
+    indicadas = proposta.indicacoes.count()
+    if indicadas >= proposta.cotas:
+        messages.error(
+            request,
+            f'Todas as {proposta.cotas} cotas da proposta já foram indicadas.',
+        )
+        return redirect('proposta_detalhe', pk=proposta.pk)
+
+    if request.method == 'POST':
+        form = IndicacaoForm(request.POST, proposta=proposta)
+        if form.is_valid():
+            indicacao = form.save(commit=False)
+            indicacao.proposta = proposta
+            indicacao.indicado_por = (
+                perfil.pessoa if (perfil and perfil.pessoa_id) else None
+            )
+            indicacao.save()
+            messages.success(
+                request,
+                f'Aluno {indicacao.aluno.nome} indicado para a cota. '
+                'O técnico irá implementar a bolsa.',
+            )
+            return redirect('proposta_detalhe', pk=proposta.pk)
+    else:
+        form = IndicacaoForm(proposta=proposta)
+
+    return render(request, 'bolsas/indicar.html', {
+        'form': form,
+        'proposta': proposta,
+        'disponiveis': proposta.cotas - indicadas,
+        'titulo': f'Indicar aluno — {proposta.titulo[:60]}',
     })
 
 

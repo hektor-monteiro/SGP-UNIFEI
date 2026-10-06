@@ -141,6 +141,8 @@ banco por compatibilidade com registros antigos à migração. A ficha **ODS**
 |-------|------|-------------|-----------|
 | id | UUID | PK | Identificador único |
 | edital_id | UUID | FK → Edital | Edital submetido |
+| projeto_id | UUID | FK → Projeto (nulo em registros antigos) | Projeto que solicita as cotas |
+| cotas | INT | Sim (default 1) | Cotas de bolsa solicitadas |
 | titulo | VARCHAR(500) | Sim | Título da proposta |
 | resumo | TEXT | Não | Resumo da proposta |
 | submetido_por | UUID | FK → Pessoa | Docente que submeteu |
@@ -350,12 +352,30 @@ Conhecimento do CNPq/Lattes de 30/06/2025 e os 17 ODS da ONU em pt-BR).
 
 ---
 
+### 2.17 Indicacao
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| id | UUID | PK | Identificador único |
+| proposta_id | UUID | FK → Proposta | Proposta **aprovada** com cotas disponíveis |
+| aluno_id | UUID | FK → Pessoa | Aluno indicado para a cota |
+| indicado_por | UUID | FK → Pessoa (nulo) | Docente/técnico que indicou |
+| status | ENUM | Sim | `pendente`, `implementada` |
+| bolsa_id | UUID | FK → Bolsa (nulo, 1:1) | Bolsa criada na implementação |
+| criado_em | TIMESTAMP | Sim | Data de criação |
+| atualizado_em | TIMESTAMP | Sim | Data de última atualização |
+
+---
+
 ## 3. Relacionamentos
 
 | Origem | Destino | Cardinalidade | Descrição |
 |--------|---------|---------------|-----------|
 | Edital | Proposta | 1:N | Um edital tem várias propostas |
-| Proposta | Projeto | 1:1 | Uma proposta aprovada gera um projeto |
+| Projeto | Proposta | 1:N | Uma proposta solicita cotas de um projeto do docente |
+| Proposta | Indicacao | 1:N | Proposta aprovada gera uma indicação por cota |
+| Indicacao | Bolsa | 1:1 | A implementação cria a bolsa da indicação |
+| Pessoa | Indicacao | 1:N | Aluno pode ser indicado em várias propostas; docente indica nas dele |
 | Projeto | Bolsa | 1:N | Um projeto tem várias bolsas |
 | Projeto | MembroEquipe | 1:N | Um projeto tem vários membros |
 | Pessoa | MembroEquipe | 1:N | Uma pessoa pode ser membro de vários projetos |
@@ -393,6 +413,9 @@ Conhecimento do CNPq/Lattes de 30/06/2025 e os 17 ODS da ONU em pt-BR).
 | 4 | Aluno: 1 orientador + 1 co-orientador | Validação em `MembroEquipe` |
 | 5 | Projeto pode ter múltiplas bolsas de fomentadores distintos | FK múltiplas em `Bolsa` |
 | 6 | Técnico propõe → Diretor/Pro-reitor valida | Campo `validado_por` em `Edital` |
+| 7 | Uma indicação por aluno por proposta | UNIQUE em `indicacao(proposta_id, aluno_id)` |
+| 8 | Indicação só em proposta `aprovada` e dentro do limite de cotas | Validação em `proposta_indicar` |
+| 9 | Bolsa nasce da indicação: implementação é só de téc+ | Validação em `indicacao_implementar` |
 
 ### 4.2 Constraints
 
@@ -479,6 +502,10 @@ ON projeto (processo_sipac_id);
 - `encerrada` — Finalizada
 - `cancelada` — Cancelada
 - `suspensa` — Temporariamente suspensa
+
+### Status da Indicação
+- `pendente` — Aluno indicado, aguardando o técnico implementar a bolsa
+- `implementada` — Bolsa criada a partir da indicação
 
 ### Função do Membro
 - `coordenador` — Coordenador do projeto

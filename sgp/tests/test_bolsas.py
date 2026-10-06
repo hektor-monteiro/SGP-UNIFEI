@@ -144,19 +144,9 @@ class BolsaAcessoTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
-    def test_docente_nao_cria_bolsa_em_projeto_alheio(self):
-        """Projeto alheio não está no queryset → validação de campo."""
-        self.client.login(username='doc_bolsa', password='x')
-        response = self.client.post(
-            reverse('bolsa_nova'),
-            _dados_bolsa(self.aluno3, self.modalidade, self.projeto_alheio),
-        )
-        self.assertEqual(response.status_code, 200)  # volta ao form com erro
-        self.assertContains(response, 'escolha válida')
-        self.assertFalse(Bolsa.objects.filter(aluno=self.aluno3).exists())
-
-    def test_docente_cria_bolsa_em_seu_projeto(self):
-        self.client.login(username='doc_bolsa', password='x')
+    def test_tecnico_cria_bolsa_manual(self):
+        """Bolsa avulsa (fora do fluxo de cotas) segue disponível p/ téc+ (§3.5)."""
+        self.client.login(username='tec_bolsa', password='x')
         response = self.client.post(
             reverse('bolsa_nova'),
             _dados_bolsa(self.aluno3, self.modalidade, self.projeto_meu),
@@ -165,6 +155,17 @@ class BolsaAcessoTests(TestCase):
         self.assertTrue(
             Bolsa.objects.filter(aluno=self.aluno3, projeto=self.projeto_meu).exists(),
         )
+
+    def test_docente_nao_cria_bolsa(self):
+        """Docente não cria bolsa: ele indica o aluno; o técnico implementa."""
+        self.client.login(username='doc_bolsa', password='x')
+        self.assertEqual(self.client.get(reverse('bolsa_nova')).status_code, 403)
+        response = self.client.post(
+            reverse('bolsa_nova'),
+            _dados_bolsa(self.aluno3, self.modalidade, self.projeto_meu),
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Bolsa.objects.filter(aluno=self.aluno3).exists())
 
 
 class RegraNegocioBolsaTests(TestCase):

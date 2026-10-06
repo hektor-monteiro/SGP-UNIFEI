@@ -45,6 +45,53 @@
 
 <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Cotas de bolsa</h2>
+        {% if pode_indicar %}
+            <a href="{% url 'proposta_indicar' proposta.pk %}" class="btn">+ Indicar aluno</a>
+        {% endif %}
+    </div>
+    <table style="margin-top:15px;">
+        <tr>
+            <th style="width:220px;">Projeto</th>
+            <td>{% if proposta.projeto %}{{ proposta.projeto.codigo }} — {{ proposta.projeto.titulo }}{% else %}—{% endif %}</td>
+        </tr>
+        <tr><th>Cotas solicitadas</th><td>{{ proposta.cotas }}</td></tr>
+        <tr><th>Cotas indicadas</th><td>{{ cotas_indicadas }}</td></tr>
+        <tr><th>Cotas disponíveis</th><td>{{ cotas_disponiveis }}</td></tr>
+    </table>
+    {% if proposta.indicacoes.all %}
+    <table style="margin-top:15px;">
+        <tr>
+            <th>Aluno indicado</th>
+            <th>Indicado por</th>
+            <th>Status</th>
+            <th>Ação</th>
+        </tr>
+        {% for ind in proposta.indicacoes.all %}
+        <tr>
+            <td>{{ ind.aluno.nome }}</td>
+            <td>{{ ind.indicado_por.nome|default:"—" }}</td>
+            <td><span class="badge">{{ ind.get_status_display }}</span></td>
+            <td>
+                {% if pode_implementar and ind.status == 'pendente' %}
+                    <a href="{% url 'indicacao_implementar' ind.pk %}">Implementar bolsa</a>
+                {% elif ind.bolsa %}
+                    <a href="{% url 'bolsa_detalhe' ind.bolsa.pk %}" style="color:#003366;">Ver bolsa</a>
+                {% else %}—{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+        <p style="margin-top:10px;">Nenhum aluno indicado até o momento.</p>
+    {% endif %}
+    {% if proposta.status != 'aprovada' %}
+        <p style="color:#666; margin-top:10px; font-size:0.9rem;">Os alunos só podem ser indicados após a aprovação das cotas no edital.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <h2 style="margin:0;">Avaliações ({{ avaliacoes|length }})</h2>
         {% if pode_gerir %}
             <div>

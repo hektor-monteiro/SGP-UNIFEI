@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MinValueValidator
 from django.utils import timezone
 import re
 import uuid
@@ -176,6 +177,21 @@ class Proposta(TimeStampedModel):
         blank=True,
         related_name='propostas',
         verbose_name='Edital',
+    )
+    projeto = models.ForeignKey(
+        Projeto,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='propostas',
+        verbose_name='Projeto',
+        help_text='Projeto que solicita as cotas de bolsa.',
+    )
+    cotas = models.PositiveIntegerField(
+        default=1,
+        verbose_name='Cotas solicitadas',
+        help_text='Quantidade de cotas de bolsa solicitadas para o projeto.',
+        validators=[MinValueValidator(1)],
     )
     submetido_por = models.ForeignKey(Pessoa, on_delete=models.CASCADE, related_name='propostas')
     data_submissao = models.DateTimeField(auto_now_add=True)

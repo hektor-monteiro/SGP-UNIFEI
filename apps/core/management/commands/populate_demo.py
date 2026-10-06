@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from apps.core.models import Instituicao, Fomentador
 from apps.projetos.models import Pessoa, Projeto, Proposta
-from apps.bolsas.models import ModalidadeBolsa, Bolsa
+from apps.bolsas.models import ModalidadeBolsa, Bolsa, Indicacao
 from apps.editais.models import Edital, Avaliacao, CriterioAvaliacao
 from apps.equipes.models import MembroEquipe
 from apps.comprovantes.models import Comprovante
@@ -46,8 +46,11 @@ class Command(BaseCommand):
         editais = self.criar_editais(modalidades)
         self.stdout.write(f'  ✓ {len(editais)} editais criados')
 
-        self.criar_propostas(editais, docentes)
+        self.criar_propostas(editais, docentes, projetos)
         self.stdout.write('  ✓ Propostas criadas')
+
+        indicacoes = self.criar_indicacoes(alunos)
+        self.stdout.write(f'  ✓ {indicacoes} indicações de cotas criadas')
 
         self.criar_comprovantes(bolsas, projetos, alunos, docentes)
         self.stdout.write('  ✓ Comprovantes criados')
@@ -416,19 +419,59 @@ class Command(BaseCommand):
             editais.append(edital)
         return editais
 
-    def criar_propostas(self, editais, docentes):
+    def criar_propostas(self, editais, docentes, projetos):
+        """Propostas de docentes solicitando cotas para seus projetos (§3.5)."""
+        criadas = []
         for edital in editais:
             for _ in range(random.randint(2, 5)):
-                Proposta.objects.get_or_create(
+                proposta, _ = Proposta.objects.get_or_create(
                     titulo=f'Proposta para {edital.codigo} - {random.randint(1, 100)}',
                     defaults={
                         'resumo': 'Resumo da proposta de pesquisa...',
                         'edital': edital,
+                        'projeto': random.choice(projetos) if projetos else None,
+                        'cotas': random.randint(1, 3),
                         'submetido_por': random.choice(docentes),
                         'status': random.choice(['submetida', 'em_avaliacao', 'aprovada', 'reprovada']),
                         'nota_final': round(random.uniform(6.0, 10.0), 2) if random.random() > 0.5 else None,
                     }
                 )
+                criadas.append(proposta)
+        return criadas
+
+    def criar_indicacoes(self, alunos):
+        """Indicações pendentes de alunos em propostas aprovadas (§3.5).
+
+        Considera todas as propostas aprovadas com projeto (não apenas as
+        sorteadas nesta execução) e usa apenas alunos sem bolsa ativa, para
+        que a implementação pelo técnico funcione no demo.
+        """
+        com_bolsa = set(
+            Bolsa.objects.filter(status='ativa').values_list('aluno_id', flat=True)
+        )
+        disponiveis = [a for a in alunos if a.pk not in com_bolsa]
+        random.shuffle(disponiveis)
+        criadas = 0
+        aprovadas = list(
+            Proposta.objects.filter(status='aprovada', projeto__isnull=False)
+        )
+        cursor = 0
+        for proposta in aprovadas[:4]:
+            quantidade = max(
+                0, min(proposta.cotas, 2, len(disponiveis) - cursor),
+            )
+            if not quantidade:
+                break
+            for aluno in disponiveis[cursor:cursor + quantidade]:
+                _, created = Indicacao.objects.get_or_create(
+                    proposta=proposta,
+                    aluno=aluno,
+                    defaults={'indicado_por': proposta.submetido_por},
+                )
+                if created:
+                    criadas += 1
+            cursor += quantidade
+        return criadas
 
     def criar_criterios(self):
         """Cria critérios de avaliação com pesos (usados na média ponderada)."""

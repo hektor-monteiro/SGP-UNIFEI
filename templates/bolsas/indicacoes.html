@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Indicações de bolsa{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">Indicações de bolsa ({{ indicacoes|length }})</h2>
+        <span class="badge">{{ pendentes }} pendente{{ pendentes|pluralize:"s" }}</span>
+    </div>
+
+    {% if indicacoes %}
+    <table style="margin-top:15px;">
+        <tr>
+            <th>Aluno</th>
+            <th>Proposta</th>
+            <th>Edital</th>
+            <th>Indicado por</th>
+            <th>Status</th>
+            <th>Ação</th>
+        </tr>
+        {% for ind in indicacoes %}
+        <tr>
+            <td>{{ ind.aluno.nome }}</td>
+            <td><a href="{% url 'proposta_detalhe' ind.proposta.pk %}" style="color:#003366;">{{ ind.proposta.titulo|truncatechars:45 }}</a></td>
+            <td>{{ ind.proposta.edital.codigo|default:"—" }}</td>
+            <td>{{ ind.indicado_por.nome|default:"—" }}</td>
+            <td><span class="badge">{{ ind.get_status_display }}</span></td>
+            <td>
+                {% if pode_implementar and ind.status == 'pendente' %}
+                    <a href="{% url 'indicacao_implementar' ind.pk %}">Implementar bolsa</a>
+                {% elif ind.bolsa %}
+                    <a href="{% url 'bolsa_detalhe' ind.bolsa.pk %}" style="color:#003366;">Ver bolsa</a>
+                {% else %}—{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+        <p style="margin-top:10px;">Nenhuma indicação até o momento.</p>
+    {% endif %}
+</div>
+
+<p><a href="{% url 'bolsas_lista' %}" style="color:#003366;">← Voltar às bolsas</a></p>
+{% endblock %}

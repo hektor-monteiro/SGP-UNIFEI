@@ -24,14 +24,18 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | Operação | aluno | docente | técnico | diretor | pro-reitor | super |
 |---|---|---|---|---|---|---|
 | Ver projetos | só os que participa/tem bolsa | todos | todos | todos | todos | todos |
-| Criar projeto/bolsa | — | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Editar projeto/bolsa | — | só os que coordena | ✅ | ✅ | ✅ | ✅ |
+| Criar projeto | — | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Criar bolsa (manual) | — | — | ✅ | ✅ | ✅ | ✅ |
+| Editar projeto | — | só os que coordena | ✅ | ✅ | ✅ | ✅ |
+| Editar bolsa | — | só as de projetos que coordena | ✅ | ✅ | ✅ | ✅ |
 | Gerenciar equipe (membros) | — | só do projeto que coordena | ✅ | ✅ | ✅ | ✅ |
 | Criar/editar edital, critérios, modalidades | — | — | ✅ | ✅ | ✅ | ✅ |
 | **Aprovar** edital (Diretoria/Reitoria) | — | — | — | ✅ | ✅ | ✅ |
 | Iniciar/encerrar/cancelar edital | — | — | ✅ | ✅ | ✅ | ✅ |
-| Submeter proposta a edital | ✅ | ✅ | — | — | — | — |
-| Editar proposta (até decisão) | própria | própria | ✅ | ✅ | ✅ | ✅ |
+| Submeter proposta a edital (projeto + cotas) | — | ✅ | — | — | — | — |
+| Editar proposta (até decisão) | — | própria | ✅ | ✅ | ✅ | ✅ |
+| Indicar aluno para cota aprovada | — | da proposta que submeteu | ✅ | ✅ | ✅ | ✅ |
+| Implementar bolsa (a partir da indicação) | — | — | ✅ | ✅ | ✅ | ✅ |
 | Alocar/remover avaliadores | — | — | ✅ | ✅ | ✅ | ✅ |
 | Avaliar proposta | — | se alocado | se alocado | se alocado | se alocado | — |
 | Criar plano de trabalho | próprio (sem plano) | bolsas coordenadas | todos | todos | todos | todos |
@@ -80,9 +84,11 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | Rota | Ação | Quem pode | Regra especial |
 |---|---|---|---|
 | `/bolsas/` | visualizar | autenticado | aluno: só as próprias |
-| `/bolsas/nova/` | criar | docente ou téc+ | docente só em projetos que coordena; regra de 1 bolsa ativa no form |
+| `/bolsas/nova/` | criar | **só téc+** | criação manual/avulsa (fora do fluxo de cotas); regra de 1 bolsa ativa no form |
 | `/bolsas/<pk>/` | visualizar | autenticado | aluno só a própria → senão 403 |
 | `/bolsas/<pk>/editar/` | editar | téc+ ou coordenador do projeto da bolsa | |
+| `/indicacoes/` | visualizar | téc+ veem todas; docente só as de suas propostas | aluno → 403; pendentes primeiro |
+| `/indicacoes/<pk>/implementar/` | criar | **só téc+** | form de bolsa pré-preenchido (projeto/aluno/modalidade/datas); marca a indicação como `implementada` |
 | `/bolsas/modalidades/` (+nova/editar) | CRUD | **téc+** (`perfil_required`) | aluno/docente → 403 |
 
 ### 3.5 Planos de trabalho e relatórios (`apps/relatorios/`)
@@ -106,9 +112,10 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | `/editais/` e `/editais/<pk>/` | visualizar | autenticado | abaixo de técnicos: **só status em andamento** (lista filtrada + detalhe 403); propostas: téc+ todas; demais só as próprias |
 | `/editais/novo/`, `/editar/` | criar/editar | **téc+** | cria como `rascunho`; status só via ações |
 | `/editais/<pk>/acao/<acao>/` (POST) | fluxo | `aprovar` → **diretor+**; `iniciar/encerrar/cancelar` → téc+ | origem/destino do status validados |
-| `/editais/<pk>/propostas/nova/` | criar | **somente aluno ou docente** | téc+ e superusuário → 403 (não são submetentes); exige edital em andamento e no período e Pessoa vinculada |
+| `/editais/<pk>/propostas/nova/` | criar | **somente docente** | aluno, téc+ e superusuário → 403 (não submetem); exige edital em andamento e no período, Pessoa vinculada e projeto do docente (coordena ou é membro) |
 | `/propostas/<pk>/` | visualizar | téc+ OU submetente OU avaliador alocado | senão 403 |
 | `/propostas/<pk>/editar/` | editar | téc+ ou submetente | só enquanto `submetida` |
+| `/propostas/<pk>/indicar/` | criar indicação | téc+ OU submetente da proposta | só proposta `aprovada` e com cotas disponíveis; bloqueia aluno com bolsa ativa ou já indicado |
 | `/propostas/<pk>/alocar/` | editar | **téc+** | banca múltipla; remoção/realocação |
 | `/avaliacoes/<pk>/` | GET: avaliador ou téc+; POST: **só o avaliador** | | notas 0–10 por critério + parecer; média ponderada |
 | `/avaliacoes/<pk>/remover/` (POST) | excluir | téc+ | |

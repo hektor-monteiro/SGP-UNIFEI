@@ -2,22 +2,27 @@
 
 Regras de acesso:
 - Lista/Detalhe: todos os autenticados; aluno vê apenas as próprias bolsas.
-- Criação: docente (somente em projetos que coordena), técnico, diretor, pro-reitor.
+- Criação manual: somente técnico, diretor e pro-reitor — o fluxo normal é
+  o docente indicar o aluno na proposta aprovada e o técnico implementar
+  a bolsa a partir da indicação (requisito §3.5).
 - Edição: coordenador do projeto da bolsa, técnico, diretor, pro-reitor.
+- Indicações: téc+ veem todas; docente, as de suas propostas; implementar:
+  somente téc+.
 """
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count
+from django.db.models import Case, Count, Value, When
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.timezone import localdate
 from django.views.decorators.cache import never_cache
 
 from apps.core.models import Perfil
-from apps.core.permissions import perfil_de, perfil_required, pode_criar, pode_gerir
+from apps.core.permissions import perfil_de, perfil_required, pode_gerir
 from apps.projetos.models import Projeto
 
 from .forms import BolsaForm, ModalidadeBolsaForm
-from .models import Bolsa, ModalidadeBolsa
+from .models import Bolsa, Indicacao, ModalidadeBolsa
 
 
 def _pode_editar(user, bolsa) -> bool:
@@ -86,7 +91,7 @@ def lista(request):
         'filtros': {'status': status, 'modalidade': modalidade, 'q': busca},
         'status_choices': Bolsa._meta.get_field('status').choices,
         'modalidades': ModalidadeBolsa.objects.filter(ativo=True),
-        'pode_criar': pode_criar(request.user),
+        'pode_criar': gerir_todos,
         'pode_gerir': gerir_todos,
         'editaveis': editaveis,
     }
@@ -131,8 +136,13 @@ def detalhe(request, pk):
 @login_required
 @never_cache
 def nova(request):
-    """Criação de bolsa (aluno não cria)."""
-    if not pode_criar(request.user):
+    """Criação manual de bolsa (somente técnico+).
+
+    No fluxo de cotas (§3.5), a bolsa nasce da indicação do docente e é
+    implementada pelo técnico em `indicacao_implementar`; esta view cobre
+    casos avulsos (sem edital).
+    """
+    if not pode_gerir(perfil_de(request.user)):
         raise PermissionDenied
 
     projetos = _projetos_para(request.user)
@@ -174,6 +184,100 @@ def editar(request, pk):
     return render(request, 'bolsas/form.html', {
         'form': form,
         'titulo': f'Editar bolsa de {bolsa.aluno.nome}',
+    })
+
+
+# --------------------------------------------------------------------------
+# Indicações de cotas (fluxo edital → proposta aprovada → bolsa, §3.5)
+# --------------------------------------------------------------------------
+
+@login_required
+@never_cache
+def indicacoes_lista(request):
+    """Fila de indicações de cotas.
+
+    Téc+ veem todas; docente, apenas as de propostas que submeteu;
+    demais perfis (aluno) não acessam.
+    """
+    perfil = perfil_de(request.user)
+    if pode_gerir(perfil):
+        indicacoes = Indicacao.objects.all()
+    elif (
+        perfil is not None
+        and perfil.perfil == Perfil.PERFIL_DOCENTE
+        and perfil.pessoa_id
+    ):
+        indicacoes = Indicacao.objects.filter(
+            proposta__submetido_por=perfil.pessoa,
+        )
+    else:
+        raise PermissionDenied
+
+    indicacoes = indicacoes.select_related(
+        'proposta', 'proposta__edital', 'aluno', 'indicado_por', 'bolsa',
+    ).annotate(
+        ordem=Case(When(status='pendente', then=Value(0)), default=Value(1)),
+    ).order_by('ordem', '-criado_em')
+
+    contexto = {
+        'indicacoes': indicacoes,
+        'pendentes': indicacoes.filter(status='pendente').count(),
+        'pode_implementar': pode_gerir(perfil),
+    }
+    return render(request, 'bolsas/indicacoes.html', contexto)
+
+
+@login_required
+@never_cache
+def indicacao_implementar(request, pk):
+    """Implementa a bolsa a partir de uma indicação (somente técnico+).
+
+    Formulário de bolsa pré-preenchido com o projeto da proposta, o aluno
+    indicado, a modalidade do edital e as datas vigentes.
+    """
+    if not pode_gerir(perfil_de(request.user)):
+        raise PermissionDenied
+
+    indicacao = get_object_or_404(
+        Indicacao.objects.select_related('proposta', 'proposta__edital', 'aluno'),
+        pk=pk,
+    )
+    if indicacao.status == 'implementada':
+        messages.error(request, 'Esta indicação já foi implementada.')
+        return redirect('indicacoes_lista')
+
+    proposta = indicacao.proposta
+    edital = proposta.edital
+    hoje = localdate()
+    iniciais = {
+        'aluno': indicacao.aluno,
+        'projeto': proposta.projeto,
+        'modalidade': edital.modalidade if edital else None,
+        'data_inicio': hoje,
+        'data_fim': (
+            edital.data_fim if edital and edital.data_fim >= hoje else None
+        ),
+        'status': 'ativa',
+    }
+
+    if request.method == 'POST':
+        form = BolsaForm(request.POST)
+        if form.is_valid():
+            bolsa = form.save()
+            indicacao.bolsa = bolsa
+            indicacao.status = 'implementada'
+            indicacao.save()
+            messages.success(
+                request,
+                f'Bolsa de {bolsa.aluno.nome} implementada com sucesso.',
+            )
+            return redirect('bolsa_detalhe', pk=bolsa.pk)
+    else:
+        form = BolsaForm(initial=iniciais)
+
+    return render(request, 'bolsas/form.html', {
+        'form': form,
+        'titulo': f'Implementar bolsa — {indicacao.aluno.nome}',
     })
 
 
