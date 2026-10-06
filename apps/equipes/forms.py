@@ -1,12 +1,13 @@
 """Formulários do módulo de Equipes (§3.8)."""
 from django import forms
 
+from apps.core.forms import BuscaNomeMixin
 from apps.projetos.models import Pessoa
 
 from .models import MembroEquipe
 
 
-class MembroEquipeForm(forms.ModelForm):
+class MembroEquipeForm(BuscaNomeMixin, forms.ModelForm):
     """Cadastro de membro de equipe.
 
     Regras validadas:
@@ -14,6 +15,7 @@ class MembroEquipeForm(forms.ModelForm):
     - Sem duplicidade de (projeto, pessoa, função)
     - `ativo` é derivado da data de saída no save (sem saída → ativo)
     """
+    campos_busca = ('pessoa',)
 
     class Meta:
         model = MembroEquipe

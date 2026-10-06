@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -93,6 +94,17 @@
             border-radius: 4px;
             font-size: 1rem;
         }
+        /* Busca digitando em <select> de nomes (padrão do projeto) */
+        .busca-nome-campo {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+        .busca-nome-info { color: #666; font-size: 0.8rem; margin-bottom: 6px; }
+        .busca-nome-info--vazio { color: #b71c1c; }
         footer {
             background: #eee;
             text-align: center;
@@ -144,5 +156,7 @@
     <footer>
         Universidade Federal de Itajubá — Diretoria de Pesquisa e Inovação
     </footer>
+
+    <script src="{% static 'js/busca_nome.js' %}" defer></script>
 </body>
 </html>

@@ -2,6 +2,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
+from apps.core.forms import BuscaNomeMixin
 from apps.projetos.models import Pessoa
 
 from .models import Bolsa, Indicacao, ModalidadeBolsa
@@ -16,7 +17,7 @@ class ModalidadeBolsaForm(forms.ModelForm):
         widgets = {'descricao': forms.Textarea(attrs={'rows': 3})}
 
 
-class BolsaForm(forms.ModelForm):
+class BolsaForm(BuscaNomeMixin, forms.ModelForm):
     """Formulário de criação/edição de bolsa.
 
     Regras de negócio validadas:
@@ -24,6 +25,7 @@ class BolsaForm(forms.ModelForm):
     - Aluno do formulário deve ser do tipo 'aluno'
     - Data de término posterior à de início
     """
+    campos_busca = ('aluno',)
 
     class Meta:
         model = Bolsa
@@ -77,12 +79,13 @@ class BolsaForm(forms.ModelForm):
         return cleaned
 
 
-class IndicacaoForm(forms.ModelForm):
+class IndicacaoForm(BuscaNomeMixin, forms.ModelForm):
     """Indicação de aluno para cota de proposta aprovada (requisito §3.5).
 
     Exclui da lista os alunos já indicados na própria proposta e bloqueia
     quem já possui bolsa ativa (regra de 1 bolsa ativa por aluno).
     """
+    campos_busca = ('aluno',)
 
     class Meta:
         model = Indicacao

@@ -4,6 +4,8 @@ from datetime import date
 from django import forms
 from django.core.exceptions import ValidationError
 
+from apps.core.forms import BuscaNomeMixin
+
 from .models import (
     AreaConhecimento,
     Pessoa,
@@ -16,8 +18,9 @@ from .models import (
 MAX_PROJETOS_SEM_FOMENTO = 2
 
 
-class ProjetoForm(forms.ModelForm):
+class ProjetoForm(BuscaNomeMixin, forms.ModelForm):
     """Formulário de criação/edição de projeto de pesquisa."""
+    campos_busca = ('coordenador',)
 
     class Meta:
         model = Projeto

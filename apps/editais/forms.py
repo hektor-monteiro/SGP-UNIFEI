@@ -5,6 +5,7 @@ from django import forms
 from django.contrib.auth.models import User
 
 from apps.bolsas.models import ModalidadeBolsa
+from apps.core.forms import BuscaNomeMixin
 from apps.core.models import Perfil
 from apps.projetos.models import Proposta
 
@@ -92,16 +93,33 @@ class CriterioForm(forms.ModelForm):
         return peso
 
 
-class AlocacaoForm(forms.Form):
+class DocenteChoiceField(forms.ModelChoiceField):
+    """Rótulo do docente pelo **nome**, não pelo login.
+
+    Exibe "Nome completo (username)" — assim o técnico digita o nome no
+    campo de busca (`busca_nome.js`) em vez de decorar o login.
+    """
+
+    def label_from_instance(self, obj):
+        pessoa = getattr(getattr(obj, 'perfil', None), 'pessoa', None)
+        nome = getattr(pessoa, 'nome', None) or obj.get_full_name() or obj.username
+        return f'{nome} ({obj.username})'
+
+
+class AlocacaoForm(BuscaNomeMixin, forms.Form):
     """Seleção do docente que vai avaliar a proposta ou o projeto.
 
     `excluir_pessoas` remove da lista os membros da equipe do projeto
     (regra de paridade: quem participa não avalia o próprio projeto).
     """
-    avaliador = forms.ModelChoiceField(
+    campos_busca = ('avaliador',)
+
+    avaliador = DocenteChoiceField(
         queryset=User.objects.filter(
             perfil__perfil=Perfil.PERFIL_DOCENTE,
-        ).order_by('username'),
+        ).select_related('perfil__pessoa').order_by(
+            'perfil__pessoa__nome', 'username',
+        ),
         label='Docente avaliador',
         empty_label='— Selecione o docente —',
     )
