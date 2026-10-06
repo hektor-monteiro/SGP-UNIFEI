@@ -235,6 +235,8 @@ class AvaliacaoConclusaoTests(TestCase):
         response = self.client.get(reverse('dashboard'))
         self.assertContains(response, 'Avaliações a realizar')
         self.assertContains(response, 'Proposta banca')
+        # Coluna "Objeto avaliado": Proposta - <código do edital>
+        self.assertContains(response, f'Proposta - {self.edital.codigo}')
         self.assertContains(response, 'Realizar avaliação')
 
     def test_conclusao_calcula_media_ponderada_e_aprova(self):

@@ -288,6 +288,8 @@ class PreenchimentoProjetoTests(BaseAvaliacaoProjetoTests):
         self.client.login(username='doc_avp2', password='x')
         response = self.client.get(reverse('dashboard'))
         self.assertContains(response, 'Avaliações a realizar')
+        # Coluna "Objeto avaliado": Projeto - <código do projeto>
+        self.assertContains(response, f'Projeto - {self.projeto.codigo}')
         self.assertContains(response, self.projeto.codigo)
 
 
