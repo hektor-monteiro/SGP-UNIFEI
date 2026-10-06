@@ -220,6 +220,13 @@ Antes de considerar qualquer tarefa concluída:
 ### JavaScript
 - `camelCase` para variáveis e funções
 - Comentários em português
+- **Seleção de nomes em formulários** segue o padrão do projeto: declarar
+  `campos_busca = ('campo',)` no form (mixin `BuscaNomeMixin` de
+  `apps/core/forms.py`) marca o `<select>` com a classe `busca-nome`; o
+  `templates/base.html` carrega `static/js/busca_nome.js`, que insere o campo
+  "Digite para filtrar…" acima do dropdown (filtro sem acento/caixa +
+  autopreenchimento com um único resultado). Usar em **qualquer** campo que
+  liste pessoas — ex.: `avaliador`, `coordenador`, `aluno`, `pessoa`
 
 ---
 

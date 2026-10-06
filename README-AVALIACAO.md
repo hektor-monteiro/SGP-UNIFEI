@@ -107,6 +107,10 @@ Marque o que foi testado e anote o que falhar:
 - [ ] **LGPD**: link no painel → `/lgpd/`; registrar consentimento; baixar
       "meus dados" (JSON); `/lgpd/auditoria/` com filtros só para técnico+
 - [ ] **Permissões**: usuários sem perfil ou de nível inferior recebem **403**
+- [ ] **Busca de nomes** (padrão do projeto): nos formulários com seleção de
+      pessoa (avaliador, coordenador, aluno, membro) digite no campo **"Digite
+      para filtrar…"** — filtra sem diferenciar acento/caixa, autopreenche
+      quando sobra um único nome e mantém o dropdown
 - [ ] **Responsividade** básica (tela de notebook/celular) e erros no console
 
 ## 6. Reportando um problema
