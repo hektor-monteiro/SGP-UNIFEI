@@ -116,6 +116,8 @@
 | data_inicio | DATE | Sim | Data de início |
 | data_termino | DATE | Não | Data de término (pode ser prorrogado) |
 | status | ENUM | Sim | `vigente`, `expirado`, `cancelado`, `arquivado`, `concluido` |
+| status_avaliacao | ENUM | Sim (default `nao_submetido`) | Ciclo da avaliação por pares: `nao_submetido`, `submetido`, `em_avaliacao`, `avaliada` |
+| nota | DECIMAL(4,2) | Não | Nota da avaliação por pares (média das avaliações concluídas) — indicador de alocação de bolsas |
 | fomentador_id | UUID | FK → Fomentador | Fomentador do projeto (se houver) |
 | recursos_internos | DECIMAL(12,2) | Não | Recursos internos (R$) |
 | recursos_externos | DECIMAL(12,2) | Não | Recursos externos (R$) |
@@ -274,10 +276,13 @@ banco por compatibilidade com registros antigos à migração. A ficha **ODS**
 | Campo | Tipo | Obrigatório | Descrição |
 |-------|------|-------------|-----------|
 | id | UUID | PK | Identificador único |
-| tipo | ENUM | Sim | `proposta`, `relatorio`, `edital` |
+| tipo | ENUM | Sim | `proposta`, `relatorio`, `edital`, `projeto` |
 | proposta_id | UUID | FK → Proposta | Proposta avaliada (se tipo=proposta) |
+| projeto_id | UUID | FK → Projeto | Projeto avaliado por pares (se tipo=projeto) |
 | relatorio_id | UUID | FK → Relatorio | Relatório avaliado (se tipo=relatorio) |
 | avaliador_id | UUID | FK → Pessoa | Avaliador |
+| alocado_por_id | UUID | FK → Usuario | Técnico+ que alocou a avaliação |
+| status | ENUM | Sim | `alocada`, `concluida` |
 | nota | DECIMAL(4,2) | Sim | Nota da avaliação |
 | parecer | TEXT | Não | Parecer do avaliador |
 | data_avaliacao | TIMESTAMP | Sim | Data da avaliação |
@@ -367,6 +372,24 @@ Conhecimento do CNPq/Lattes de 30/06/2025 e os 17 ODS da ONU em pt-BR).
 
 ---
 
+### 2.18 Critério de Avaliação (CriterioAvaliacao)
+
+Catálogo global gerido por técnico+; alimenta a média ponderada das
+avaliações (projetos por pares e cotas em editais).
+
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| id | UUID | PK | Identificador único |
+| nome | VARCHAR(100) | Sim (único) | Nome do critério (ex: Impacto e inovação) |
+| escopo | ENUM | Sim (default `proposta`) | Onde o critério vale: `proposta`, `projeto`, `ambos` |
+| descricao | TEXT | Não | Descrição |
+| peso | DECIMAL(5,2) | Sim | Peso na média ponderada (maior que zero) |
+| ativo | BOOLEAN | Sim | Se está ativo |
+| criado_em | TIMESTAMP | Sim | Data de criação |
+| atualizado_em | TIMESTAMP | Sim | Data de última atualização |
+
+---
+
 ## 3. Relacionamentos
 
 | Origem | Destino | Cardinalidade | Descrição |
@@ -389,6 +412,7 @@ Conhecimento do CNPq/Lattes de 30/06/2025 e os 17 ODS da ONU em pt-BR).
 | Pessoa | Usuario | 1:1 | Uma pessoa tem um usuário |
 | Projeto | ProcessoSipac | 1:1 | Um projeto tem um processo SIPAC |
 | Proposta | Avaliacao | 1:N | Uma proposta tem várias avaliações |
+| Projeto | Avaliacao | 1:N | Um projeto tem avaliações por pares (tipo=projeto) |
 | Relatorio | Avaliacao | 1:N | Um relatório tem várias avaliações |
 | Pessoa | Comprovante | 1:N | Uma pessoa tem vários comprovantes |
 | Projeto | Comprovante | 1:N | Um projeto tem vários comprovantes |
@@ -416,6 +440,9 @@ Conhecimento do CNPq/Lattes de 30/06/2025 e os 17 ODS da ONU em pt-BR).
 | 7 | Uma indicação por aluno por proposta | UNIQUE em `indicacao(proposta_id, aluno_id)` |
 | 8 | Indicação só em proposta `aprovada` e dentro do limite de cotas | Validação em `proposta_indicar` |
 | 9 | Bolsa nasce da indicação: implementação é só de téc+ | Validação em `indicacao_implementar` |
+| 10 | Avaliação por pares: a equipe do projeto (coordenador e membros) não avalia o próprio projeto | Exclusão da equipe em `projeto_alocar` |
+| 11 | Nota do projeto = média das avaliações concluídas; exibida como indicador e ordena a fila de indicações (maior nota primeiro) | `_recalcular_projeto` + template de indicação/implementação + `indicacoes_lista` |
+| 12 | Critérios de avaliação valem conforme o escopo (`proposta`/`projeto`/`ambos`) | Filtro em `avaliacao_detalhe` |
 
 ### 4.2 Constraints
 
@@ -489,6 +516,17 @@ ON projeto (processo_sipac_id);
 - `cancelado` — Cancelado
 - `arquivado` — Arquivado
 - `concluido` — Concluído com sucesso
+
+### Status da Avaliação do Projeto (por pares)
+- `nao_submetido` — Ainda não enviado pelo coordenador
+- `submetido` — Enviado, aguardando alocação de avaliadores
+- `em_avaliacao` — Ao menos um avaliador alocado
+- `avaliada` — Todas as alocações concluídas (`nota` preenchida)
+
+### Escopo do Critério de Avaliação
+- `proposta` — Vale na avaliação de cotas dos editais
+- `projeto` — Vale na avaliação por pares de projetos
+- `ambos` — Vale nos dois fluxos
 
 ### Status do Edital
 - `rascunho` — Em elaboração

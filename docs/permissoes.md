@@ -38,6 +38,8 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | Implementar bolsa (a partir da indicação) | — | — | ✅ | ✅ | ✅ | ✅ |
 | Alocar/remover avaliadores | — | — | ✅ | ✅ | ✅ | ✅ |
 | Avaliar proposta | — | se alocado | se alocado | se alocado | se alocado | — |
+| Enviar projeto para avaliação por pares | — | só do projeto que coordena | ✅ | ✅ | ✅ | ✅ |
+| Avaliar projeto (por pares) | — | se alocado | se alocado | se alocado | se alocado | — |
 | Criar plano de trabalho | próprio (sem plano) | bolsas coordenadas | todos | todos | todos | todos |
 | Avaliar plano/relatório | — | orientandos + co-orientados | ✅ | ✅ | ✅ | ✅ |
 | Emitir comprovantes | bolsa própria, participação própria, avaliações que fez | bolsas orientadas + os acima | tudo | tudo | tudo | tudo |
@@ -69,6 +71,7 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | `/projetos/novo/` | criar | docente ou téc+ | aluno → 403; docente vira coordenador |
 | `/projetos/<pk>/` | visualizar | autenticado | aluno precisa de vínculo (membro ou bolsa) → senão 403 |
 | `/projetos/<pk>/editar/` | editar | téc+ **ou** coordenador do projeto | coordenador não altera o campo coordenador |
+| `/projetos/<pk>/submeter/` (POST) | enviar para avaliação por pares | **coordenador do projeto ou téc+** | só de `nao_submetido`; reenvio bloqueado; aluno/docente-de-fora → 403 |
 
 ### 3.3 Equipes (`apps/equipes/`)
 
@@ -87,7 +90,7 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | `/bolsas/nova/` | criar | **só téc+** | criação manual/avulsa (fora do fluxo de cotas); regra de 1 bolsa ativa no form |
 | `/bolsas/<pk>/` | visualizar | autenticado | aluno só a própria → senão 403 |
 | `/bolsas/<pk>/editar/` | editar | téc+ ou coordenador do projeto da bolsa | |
-| `/indicacoes/` | visualizar | téc+ veem todas; docente só as de suas propostas | aluno → 403; pendentes primeiro |
+| `/indicacoes/` | visualizar | téc+ veem todas; docente só as de suas propostas | aluno → 403; pendentes primeiro, depois **maior nota de projeto** (nulas por último) |
 | `/indicacoes/<pk>/implementar/` | criar | **só téc+** | form de bolsa pré-preenchido (projeto/aluno/modalidade/datas); marca a indicação como `implementada` |
 | `/bolsas/modalidades/` (+nova/editar) | CRUD | **téc+** (`perfil_required`) | aluno/docente → 403 |
 
@@ -117,9 +120,10 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | `/propostas/<pk>/editar/` | editar | téc+ ou submetente | só enquanto `submetida` |
 | `/propostas/<pk>/indicar/` | criar indicação | téc+ OU submetente da proposta | só proposta `aprovada` e com cotas disponíveis; bloqueia aluno com bolsa ativa ou já indicado |
 | `/propostas/<pk>/alocar/` | editar | **téc+** | banca múltipla; remoção/realocação |
-| `/avaliacoes/<pk>/` | GET: avaliador ou téc+; POST: **só o avaliador** | | notas 0–10 por critério + parecer; média ponderada |
-| `/avaliacoes/<pk>/remover/` (POST) | excluir | téc+ | |
-| `/criterios/` (+novo/editar) | CRUD | **téc+** | pesos → nota final; aprovação por `Edital.nota_minima` |
+| `/projetos/<pk>/alocar/` | alocar avaliadores de projeto | **téc+** | só após envio para avaliação; exclui a equipe do projeto (paridade) da lista; banca múltipla |
+| `/avaliacoes/<pk>/` | GET: avaliador ou téc+; POST: **só o avaliador** | | notas 0–10 por critério do **escopo** (`proposta`/`projeto`/`ambos`) + parecer; média ponderada; concluída recalcula a nota da proposta ou do projeto |
+| `/avaliacoes/<pk>/remover/` (POST) | excluir | téc+ | recalcula proposta ou projeto (sem alocações → `submetido`) |
+| `/criterios/` (+novo/editar) | CRUD | **téc+** | escopo (`proposta`/`projeto`/`ambos`) + pesos → nota final; aprovação por `Edital.nota_minima` |
 
 ### 3.7 Comprovantes (`apps/comprovantes/`)
 

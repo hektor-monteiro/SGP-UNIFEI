@@ -73,6 +73,13 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Pode ter múltiplas bolsas de fomentadores distintos
 - Pode ter múltiplos membros (internos e externos)
 - Docente coordenador: máximo 2 sem fomento, ilimitado com fomento
+- **Avaliação por pares**: o coordenador (ou técnico+) envia o projeto para
+  avaliação por um botão no detalhe; o **técnico+ aloca docentes** como
+  avaliadores (banca múltipla) — a equipe do projeto é excluída da lista
+  (paridade: quem participa não avalia o próprio projeto); o avaliador dá
+  notas 0–10 pelos **critérios de escopo `projeto`** (catálogo gerido pelo
+  técnico+, §3.12) + parecer; a **nota final** é a média das avaliações
+  concluídas (projeto passa a `avaliada` quando todas concluírem)
 
 ### 3.5 Bolsa
 - Vinculada a um projeto
@@ -80,6 +87,7 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Vinculada a uma modalidade
 - Vinculada a um fomentador
 - **Fluxo de cotas**: o docente submete a proposta no edital em andamento apontando **projeto + nº de cotas**; após a aprovação na avaliação, ele **indica os alunos** (limite = cotas aprovadas; aluno já com bolsa ativa é bloqueado); o **técnico implementa a bolsa** a partir da indicação, com formulário pré-preenchido (projeto, aluno, modalidade do edital)
+- **Nota do projeto como indicador de alocação**: a nota da avaliação por pares (§3.4) e a nota da proposta aparecem nas telas de decisão — detalhe da proposta (seção de cotas), indicação do docente, fila do técnico e implementação; a **fila de indicações ordena por prioridade**: pendentes primeiro, depois **maior nota de projeto** (nulas por último)
 - **Criação manual de bolsa**: somente técnico+ (casos avulsos, fora de edital) — o docente não cria bolsa, ele indica o aluno
 
 ### 3.6 Aluno
@@ -115,8 +123,13 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 
 ### 3.12 Avaliação
 - De propostas (submetidas a editais)
+- De projetos (avaliação por pares — §3.4)
 - De relatórios finais
 - De processos de avaliação de editais
+- **Critérios com pesos** (catálogo global gerido por técnico+, com
+  `escopo`: `proposta`, `projeto` ou `ambos`) — a nota é a **média
+  ponderada** pelos pesos; alocação de avaliadores e remoção são de
+  técnico+; quem é alocado preenche notas 0–10 + parecer
 
 ### 3.13 Usuário
 - Perfil de acesso

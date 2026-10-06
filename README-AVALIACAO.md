@@ -38,6 +38,7 @@ Aguarde ~30 segundos (o sistema aplica migrações e semeia os dados sozinho).
 | `http://localhost:8000/` | — | — |
 | `http://localhost:8000/contas/entrar/` | `aluno1` | `demo123` |
 | idem | `docente1` | `demo123` |
+| idem | `docente2` | `demo123` |
 | idem | `tecnico1` | `demo123` |
 | idem | `diretor1` | `demo123` |
 | idem | `proreitor1` | `demo123` |
