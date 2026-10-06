@@ -129,6 +129,8 @@ def detalhe(request, pk):
         'pode_alocar': (
             _pode_gerir(perfil)
             and projeto.status_avaliacao != 'nao_submetido'
+            # Financiamento externo: nota 10,00 automática, sem banca
+            and not projeto.nota_automatica
         ),
         # Docente (qualquer) e perfis técnicos+ veem os planos das bolsas;
         # aluno não vê planos de terceiros
@@ -144,11 +146,20 @@ def submeter(request, pk):
 
     Somente o coordenador (ou técnico+) dispara o envio; a partir daí o
     técnico aloca os avaliadores docentes e a nota resultante passa a
-    ser exibida como indicador na alocação de bolsas.
+    ser exibida como indicador na alocação de bolsas. Projetos com
+    financiamento externo já nascem avaliados com nota 10,00 (nota
+    automática) e não precisam deste envio.
     """
     projeto = get_object_or_404(Projeto, pk=pk)
     if not _pode_editar(request.user, projeto):
         raise PermissionDenied
+    if projeto.nota_automatica:
+        messages.success(
+            request,
+            'Projeto com financiamento externo: nota 10,00 atribuída '
+            'automaticamente — a avaliação por pares é dispensada.',
+        )
+        return redirect('projeto_detalhe', pk=projeto.pk)
     if projeto.status_avaliacao != 'nao_submetido':
         messages.error(
             request,

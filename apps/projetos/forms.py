@@ -64,6 +64,11 @@ class ProjetoForm(forms.ModelForm):
             'Tabela de Áreas do Conhecimento do CNPq — escolha a Grande Área '
             'e depois a Área para filtrar as subáreas.'
         )
+        # Regra da UNIFEI (§3.4): financiamento externo → nota 10,00
+        self.fields['recursos_externos'].help_text = (
+            'Projetos com recursos externos recebem nota 10,00 '
+            'automaticamente (sem avaliação por pares).'
+        )
 
         # Mapa de hierarquia consumido pelo JS da cascata (id -> id do pai)
         self.hierarquia_ids = {

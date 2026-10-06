@@ -129,7 +129,13 @@
 
     <table style="margin-top:15px;">
         <tr><th style="width:180px;">Status da avaliação</th><td><span class="badge">{{ projeto.get_status_avaliacao_display }}</span></td></tr>
-        <tr><th>Nota final (média entre avaliadores)</th><td>{% if projeto.nota is not None %}<strong>{{ projeto.nota }}</strong> — usada como indicador na alocação de bolsas{% else %}—{% endif %}</td></tr>
+        <tr><th>Nota final</th><td>
+            {% if projeto.nota_automatica %}
+                <strong>10,00</strong> — automática (financiamento externo), usada como indicador na alocação de bolsas
+            {% elif projeto.nota is not None %}
+                <strong>{{ projeto.nota }}</strong> — média entre avaliadores, usada como indicador na alocação de bolsas
+            {% else %}—{% endif %}
+        </td></tr>
     </table>
 
     {% if avaliacoes %}
@@ -157,6 +163,8 @@
         </tr>
         {% endfor %}
     </table>
+    {% elif projeto.nota_automatica %}
+        <p style="margin-top:12px; color:#666;">Financiamento externo: nota 10,00 atribuída automaticamente — a avaliação por pares é dispensada.</p>
     {% elif projeto.status_avaliacao == 'nao_submetido' %}
         <p style="margin-top:12px; color:#666;">O coordenador ainda não enviou o projeto para avaliação por pares.</p>
     {% else %}

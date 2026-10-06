@@ -60,3 +60,42 @@ class PopulateDemoIndicadoresTests(TestCase):
         # Recursos são valores positivos quando preenchidos
         for projeto in Projeto.objects.exclude(recursos_internos=None):
             self.assertGreater(projeto.recursos_internos, Decimal('0'))
+
+    def test_seed_coerente_com_nota_automatica(self):
+        """§3.4: financiamento externo → nota 10,00 automática.
+
+        E a avaliação por pares simulada pelo seed só acontece em
+        projetos sem recursos externos (com eles a nota é automática).
+        """
+        random.seed(42)
+        call_command('populate_demo', stdout=StringIO())
+
+        externos = Projeto.objects.filter(recursos_externos__gt=0)
+        self.assertTrue(externos.exists())
+        self.assertEqual(
+            externos.exclude(
+                status_avaliacao='avaliada',
+                nota=Decimal('10.00'),
+                nota_automatica=True,
+            ).count(),
+            0,
+        )
+
+        # O seed cobre os dois lados do indicador
+        self.assertTrue(
+            Projeto.objects.filter(recursos_externos__isnull=True).exists(),
+        )
+
+        # Avaliação por pares simulada só em projetos sem financiamento
+        avaliados = Projeto.objects.filter(
+            avaliacoes__tipo='projeto',
+        ).distinct()
+        self.assertTrue(avaliados.exists())
+        self.assertEqual(
+            avaliados.filter(recursos_externos__gt=0).count(), 0,
+        )
+
+        # Fluxo continua coberto: projeto submetido aguardando alocação
+        self.assertTrue(
+            Projeto.objects.filter(status_avaliacao='submetido').exists(),
+        )

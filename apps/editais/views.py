@@ -176,25 +176,12 @@ def _recalcular_projeto(projeto) -> None:
       não é desfeita aqui) e a nota é apagada.
     - Com avaliações concluídas: nota = média simples das notas; todas
       concluídas → 'avaliada', senão → 'em_avaliacao'.
+    - Com financiamento externo (nota automática): não recalcula — a
+      nota 10,00 é fixa e dispensa a avaliação por pares.
     """
-    avaliacoes = list(projeto.avaliacoes.all())
-    concluidas = [a for a in avaliacoes if a.status == 'concluida' and a.nota is not None]
-
-    if not avaliacoes:
-        projeto.nota = None
-        if projeto.status_avaliacao != 'nao_submetido':
-            projeto.status_avaliacao = 'submetido'
-    elif not concluidas:
-        projeto.status_avaliacao = 'em_avaliacao'
-        projeto.nota = None
-    else:
-        media = sum((a.nota for a in concluidas), Decimal('0')) / len(concluidas)
-        projeto.nota = media.quantize(Decimal('0.01'))
-        projeto.status_avaliacao = (
-            'avaliada'
-            if len(concluidas) == len(avaliacoes)
-            else 'em_avaliacao'
-        )
+    if projeto.nota_automatica:
+        return
+    projeto.recalcular_avaliacao()
     projeto.save()
 
 
@@ -693,6 +680,14 @@ def projeto_alocar(request, pk):
         raise PermissionDenied
 
     projeto = get_object_or_404(Projeto, pk=pk)
+
+    if projeto.nota_automatica:
+        messages.error(
+            request,
+            'Projeto com financiamento externo já tem nota 10,00 '
+            '(automática) e não recebe avaliação por pares.',
+        )
+        return redirect('projeto_detalhe', pk=projeto.pk)
 
     if projeto.status_avaliacao == 'nao_submetido':
         messages.error(

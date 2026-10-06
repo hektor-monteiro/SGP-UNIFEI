@@ -286,8 +286,11 @@ class Command(BaseCommand):
                     'fomentador': random.choice(fomentadores) if random.random() > 0.3 else None,
                     # Recursos vinculados alimentam a execução orçamentária (§5.1)
                     'recursos_internos': round(random.uniform(5000, 80000), 2),
+                    # Financiamento externo por índice (índices ímpares):
+                    # mistura previsível de projetos com nota 10,00
+                    # automática e projetos aptos à avaliação por pares (§3.4)
                     'recursos_externos': (
-                        round(random.uniform(10000, 150000), 2) if random.random() > 0.4 else None
+                        round(random.uniform(10000, 150000), 2) if i % 2 else None
                     ),
                 }
             )
@@ -572,6 +575,8 @@ class Command(BaseCommand):
         os estados do fluxo: avaliado com um avaliador, avaliado por
         banca (média final), em avaliação (alocação pendente — aparece
         no painel do avaliador) e submetido aguardando alocação.
+        Projetos com financiamento externo ficam de fora: eles já têm
+        nota 10,00 automática e dispensam avaliação por pares.
         """
         from django.contrib.auth.models import User
         from apps.core.models import Perfil
@@ -602,6 +607,11 @@ class Command(BaseCommand):
                 if pessoa_id_de(u) not in ids_equipe
             ]
 
+        def sem_financiamento(projeto):
+            """Projetos com financiamento externo têm nota 10,00
+            automática e ficam fora da avaliação por pares (§3.4)."""
+            return not projeto.financiamento_externo
+
         def concluir(projeto, avaliador, nota, parecer) -> int:
             _, created = Avaliacao.objects.get_or_create(
                 tipo='projeto',
@@ -620,7 +630,9 @@ class Command(BaseCommand):
 
         criadas = 0
         cobertos = set()
-        candidatos = list(projetos)
+        # Só projetos sem financiamento externo: com recursos externos a
+        # nota é 10,00 automática e a avaliação por pares é dispensada
+        candidatos = [p for p in projetos if sem_financiamento(p)]
 
         # 1) Projeto ligado a uma proposta do docente demo: recebe um
         #    avaliador concluído (é a tela de indicação/indicação usada
@@ -653,7 +665,7 @@ class Command(BaseCommand):
                 projeto = proposta.projeto
                 if projeto is None or projeto.pk in cobertos:
                     continue
-                if disponiveis(projeto):
+                if sem_financiamento(projeto) and disponiveis(projeto):
                     alvo_preferido = projeto
                     break
 

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
@@ -131,7 +133,23 @@ class Projeto(TimeStampedModel):
         null=True,
         blank=True,
         verbose_name='Nota da avaliação por pares',
-        help_text='Média das notas das avaliações concluídas.',
+        help_text=(
+            'Média das notas das avaliações concluídas ou 10,00 '
+            'automática quando há financiamento externo.'
+        ),
+    )
+    # Regra da UNIFEI (§3.4): projeto com financiamento externo
+    # (recursos externos > 0) recebe nota 10,00 automaticamente e não
+    # passa pela avaliação por pares. O flag marca a nota como automática
+    # para exibir a origem na interface e para reverter o fluxo se os
+    # recursos externos forem removidos.
+    nota_automatica = models.BooleanField(
+        default=False,
+        verbose_name='Nota automática',
+        help_text=(
+            'Nota 10,00 atribuída automaticamente por financiamento '
+            'externo (recursos externos > 0).'
+        ),
     )
     fomentador = models.ForeignKey(Fomentador, on_delete=models.SET_NULL, null=True, blank=True, related_name='projetos')
     recursos_internos = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
@@ -164,6 +182,67 @@ class Projeto(TimeStampedModel):
 
     def __str__(self):
         return f'{self.codigo} - {self.titulo[:50]}'
+
+    @property
+    def financiamento_externo(self) -> bool:
+        """True quando o projeto tem financiamento externo (recursos externos > 0)."""
+        return bool(self.recursos_externos and self.recursos_externos > 0)
+
+    def save(self, *args, **kwargs):
+        """Aplica a regra de nota automática por financiamento externo (§3.4).
+
+        Com recursos externos > 0 o projeto recebe nota 10,00 e o status
+        'avaliada' sem passar pela avaliação por pares. Ao remover (ou
+        zerar) os recursos externos o projeto volta para o fluxo de
+        avaliação: se já houver alocações, a nota é recalculada com as
+        avaliações existentes; senão ele volta para 'não submetido' e o
+        coordenador pode enviá-lo novamente.
+        """
+        if self.financiamento_externo:
+            self.nota_automatica = True
+            self.status_avaliacao = 'avaliada'
+            self.nota = Decimal('10.00')
+        elif self.nota_automatica:
+            self.nota_automatica = False
+            if self.avaliacoes.exists():
+                self.recalcular_avaliacao()
+            else:
+                self.status_avaliacao = 'nao_submetido'
+                self.nota = None
+        super().save(*args, **kwargs)
+
+    def recalcular_avaliacao(self) -> None:
+        """Reprocessa status de avaliação e nota a partir das alocações (§3.4).
+
+        Regras:
+        - Sem alocações: volta para 'submetido' (a submissão é explícita e
+          não é desfeita aqui) e a nota é apagada.
+        - Com avaliações concluídas: nota = média simples das notas; todas
+          concluídas → 'avaliada', senão → 'em_avaliacao'.
+
+        Não grava em banco: quem chama decide o `save()` (assim a regra
+        de nota automática do `save()` continua valendo).
+        """
+        avaliacoes = list(self.avaliacoes.all())
+        concluidas = [
+            a for a in avaliacoes if a.status == 'concluida' and a.nota is not None
+        ]
+
+        if not avaliacoes:
+            self.nota = None
+            if self.status_avaliacao != 'nao_submetido':
+                self.status_avaliacao = 'submetido'
+        elif not concluidas:
+            self.status_avaliacao = 'em_avaliacao'
+            self.nota = None
+        else:
+            media = sum((a.nota for a in concluidas), Decimal('0')) / len(concluidas)
+            self.nota = media.quantize(Decimal('0.01'))
+            self.status_avaliacao = (
+                'avaliada'
+                if len(concluidas) == len(avaliacoes)
+                else 'em_avaliacao'
+            )
 
 
 # Padrão dos códigos existentes na DIP: PVDI + sequencial + ano de registro

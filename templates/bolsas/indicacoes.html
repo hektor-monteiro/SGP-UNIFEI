@@ -24,7 +24,7 @@
         <tr>
             <td>{{ ind.aluno.nome }}</td>
             <td><a href="{% url 'proposta_detalhe' ind.proposta.pk %}" style="color:#003366;">{{ ind.proposta.titulo|truncatechars:45 }}</a></td>
-            <td>{% if ind.proposta.projeto.nota is not None %}<strong>{{ ind.proposta.projeto.nota }}</strong>{% else %}—{% endif %}</td>
+            <td>{% if ind.proposta.projeto.nota is not None %}<strong>{{ ind.proposta.projeto.nota }}</strong>{% if ind.proposta.projeto.nota_automatica %} <span class="badge" title="Nota 10,00 automática por financiamento externo">automática</span>{% endif %}{% else %}—{% endif %}</td>
             <td>{{ ind.proposta.edital.codigo|default:"—" }}</td>
             <td>{{ ind.indicado_por.nome|default:"—" }}</td>
             <td><span class="badge">{{ ind.get_status_display }}</span></td>

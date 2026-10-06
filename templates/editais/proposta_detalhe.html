@@ -63,8 +63,8 @@
             <td>{{ proposta.nota_final|default:"—" }}</td>
         </tr>
         <tr>
-            <th>Nota do projeto (avaliação por pares)</th>
-            <td>{% if proposta.projeto.nota is not None %}<strong>{{ proposta.projeto.nota }}</strong> ({{ proposta.projeto.get_status_avaliacao_display }}){% else %}—{% endif %}</td>
+            <th>Nota do projeto{% if not proposta.projeto.nota_automatica %} (avaliação por pares){% endif %}</th>
+            <td>{% if proposta.projeto.nota is not None %}<strong>{{ proposta.projeto.nota }}</strong> ({{ proposta.projeto.get_status_avaliacao_display }}{% if proposta.projeto.nota_automatica %} — automática{% endif %}){% else %}—{% endif %}</td>
         </tr>
     </table>
     {% if proposta.indicacoes.all %}

@@ -9,8 +9,13 @@
     {% if projeto_indicador %}
         <p style="color:#666;">
             <strong>Indicadores:</strong> projeto {{ projeto_indicador.codigo }},
-            nota da avaliação por pares:
-            {% if projeto_indicador.nota is not None %}<strong>{{ projeto_indicador.nota }}</strong>{% else %}— (ainda não avaliado){% endif %}
+            {% if projeto_indicador.nota_automatica %}
+                nota automática por financiamento externo:
+                <strong>{{ projeto_indicador.nota }}</strong>
+            {% else %}
+                nota da avaliação por pares:
+                {% if projeto_indicador.nota is not None %}<strong>{{ projeto_indicador.nota }}</strong>{% else %}— (ainda não avaliado){% endif %}
+            {% endif %}
         </p>
     {% endif %}
 

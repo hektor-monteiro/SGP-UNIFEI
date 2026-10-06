@@ -13,8 +13,8 @@
         Após a indicação, o técnico irá implementar a bolsa.
         <br>
         <strong>Indicadores:</strong>
-        nota do projeto (avaliação por pares):
-        {% if proposta.projeto.nota is not None %}<strong>{{ proposta.projeto.nota }}</strong>{% else %}—{% endif %}
+        nota do projeto:
+        {% if proposta.projeto.nota is not None %}<strong>{{ proposta.projeto.nota }}</strong>{% if proposta.projeto.nota_automatica %} (automática — financiamento externo){% endif %}{% else %}—{% endif %}
         · nota da proposta (avaliação das cotas): {{ proposta.nota_final|default:"—" }}
     </p>
 

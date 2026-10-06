@@ -27,7 +27,11 @@
     </div>
     {% if projeto.nota is not None %}
         <p style="margin-top:10px; color:#666;">
-            Nota final do projeto (média entre avaliadores): <strong>{{ projeto.nota }}</strong>
+            {% if projeto.nota_automatica %}
+                Nota automática por financiamento externo: <strong>{{ projeto.nota }}</strong>
+            {% else %}
+                Nota final do projeto (média entre avaliadores): <strong>{{ projeto.nota }}</strong>
+            {% endif %}
             — situação: <span class="badge">{{ projeto.get_status_avaliacao_display }}</span>
         </p>
     {% endif %}
