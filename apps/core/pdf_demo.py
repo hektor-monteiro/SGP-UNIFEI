@@ -38,7 +38,10 @@ def gerar_pdf(titulo: str, paragrafos=()) -> bytes:
             b'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] '
             b'/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>'
         ),
-        b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+        # /Encoding explícito: sem ele o visualizador interpreta os bytes com
+        # a codificação padrão da fonte e os acentos saem errados (á → Æ)
+        b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica '
+        b'/Encoding /WinAnsiEncoding >>',
         b'<< /Length '
         + str(len(conteudo)).encode()
         + b' >>\nstream\n'
