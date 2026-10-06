@@ -11,6 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 
 from apps.core.models import Perfil
 from apps.core.permissions import (
@@ -117,11 +118,52 @@ def detalhe(request, pk):
             'aluno', 'modalidade', 'fomentador', 'plano_trabalho',
         ).all(),
         'pode_editar': _pode_editar(request.user, projeto),
+        # Avaliação por pares (§3.4): alocações, status e nota
+        'avaliacoes': projeto.avaliacoes.select_related(
+            'avaliador', 'alocado_por',
+        ).order_by('data_avaliacao'),
+        'pode_submeter': (
+            _pode_editar(request.user, projeto)
+            and projeto.status_avaliacao == 'nao_submetido'
+        ),
+        'pode_alocar': (
+            _pode_gerir(perfil)
+            and projeto.status_avaliacao != 'nao_submetido'
+        ),
         # Docente (qualquer) e perfis técnicos+ veem os planos das bolsas;
         # aluno não vê planos de terceiros
         'mostrar_planos': perfil is None or perfil.perfil != Perfil.PERFIL_ALUNO,
     }
     return render(request, 'projetos/detalhe.html', contexto)
+
+
+@login_required
+@require_POST
+def submeter(request, pk):
+    """Envia o projeto para avaliação por pares (§3.4).
+
+    Somente o coordenador (ou técnico+) dispara o envio; a partir daí o
+    técnico aloca os avaliadores docentes e a nota resultante passa a
+    ser exibida como indicador na alocação de bolsas.
+    """
+    projeto = get_object_or_404(Projeto, pk=pk)
+    if not _pode_editar(request.user, projeto):
+        raise PermissionDenied
+    if projeto.status_avaliacao != 'nao_submetido':
+        messages.error(
+            request,
+            'Este projeto já foi enviado para avaliação por pares.',
+        )
+        return redirect('projeto_detalhe', pk=projeto.pk)
+
+    projeto.status_avaliacao = 'submetido'
+    projeto.save()
+    messages.success(
+        request,
+        'Projeto enviado para avaliação por pares. '
+        'O técnico da DIP irá alocar os avaliadores.',
+    )
+    return redirect('projeto_detalhe', pk=projeto.pk)
 
 
 @login_required

@@ -1,4 +1,5 @@
 import random
+from decimal import Decimal
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -64,6 +65,9 @@ class Command(BaseCommand):
         alocacoes = self.criar_avaliacoes(editais)
         self.stdout.write(f'  ✓ {alocacoes} alocações de avaliação criadas')
 
+        avaliacoes_projeto = self.criar_avaliacoes_projeto(projetos)
+        self.stdout.write(f'  ✓ {avaliacoes_projeto} avaliações de projeto (por pares) criadas')
+
         self.stdout.write(self.style.SUCCESS('População concluída com sucesso!'))
 
     def criar_usuarios_demo(self, alunos, docentes):
@@ -92,6 +96,42 @@ class Command(BaseCommand):
         u = get_or_create_user('docente1', 'docente1@unifei.edu.br')
         Perfil.objects.get_or_create(user=u, defaults={'perfil': Perfil.PERFIL_DOCENTE, 'pessoa': docentes[0] if docentes else None})
         usuarios.append('docente1')
+
+        # Segundo docente: avaliador da avaliação por pares (§3.4). Escolhe
+        # um docente fora da equipe do projeto da proposta do docente1 que
+        # já tem indicações — paridade: quem participa não avalia.
+        equipe_alvo = set()
+        perfil_d1 = Perfil.objects.filter(user=u).first()
+        if perfil_d1 is not None and perfil_d1.pessoa_id:
+            proposta_d1 = (
+                Proposta.objects
+                .filter(submetido_por=perfil_d1.pessoa_id,
+                        indicacoes__isnull=False)
+                .select_related('projeto')
+                .first()
+            )
+            if proposta_d1 is not None and proposta_d1.projeto_id:
+                equipe_alvo = set(
+                    proposta_d1.projeto.membros.values_list('pessoa_id', flat=True),
+                )
+                if proposta_d1.projeto.coordenador_id:
+                    equipe_alvo.add(proposta_d1.projeto.coordenador_id)
+        candidatos_docente = [
+            d for d in docentes
+            if d.pk not in equipe_alvo and d.pk != docentes[0].pk
+        ]
+        segundo = candidatos_docente[0] if candidatos_docente else (
+            docentes[1] if len(docentes) > 1 else None
+        )
+        u = get_or_create_user('docente2', 'docente2@unifei.edu.br')
+        Perfil.objects.get_or_create(
+            user=u,
+            defaults={
+                'perfil': Perfil.PERFIL_DOCENTE,
+                'pessoa': segundo,
+            },
+        )
+        usuarios.append('docente2')
 
         # Técnico administrativo
         u = get_or_create_user('tecnico1', 'tecnico1@unifei.edu.br')
@@ -474,17 +514,24 @@ class Command(BaseCommand):
         return criadas
 
     def criar_criterios(self):
-        """Cria critérios de avaliação com pesos (usados na média ponderada)."""
+        """Cria critérios de avaliação com pesos (usados na média ponderada).
+
+        Critérios com escopo 'proposta' alimentam a avaliação de cotas em
+        editais; com escopo 'projeto', a avaliação por pares de projetos
+        (§3.4). O escopo 'ambos' serviria aos dois fluxos.
+        """
         criterios = []
         dados = [
-            ('Relevância do tema', 'Contribuição do tema para a área e para a UNIFEI.', 3.00),
-            ('Metodologia', 'Adequação do método proposto aos objetivos.', 3.00),
-            ('Viabilidade', 'Viabilidade técnica, prazos e recursos disponíveis.', 2.00),
+            ('Relevância do tema', 'Contribuição do tema para a área e para a UNIFEI.', 3.00, 'proposta'),
+            ('Metodologia', 'Adequação do método proposto aos objetivos.', 3.00, 'proposta'),
+            ('Viabilidade', 'Viabilidade técnica, prazos e recursos disponíveis.', 2.00, 'proposta'),
+            ('Impacto e inovação', 'Contribuição inovadora e impacto esperado do projeto.', 3.00, 'projeto'),
+            ('Equipe e execução', 'Capacidade da equipe, cronograma e recursos do projeto.', 2.00, 'projeto'),
         ]
-        for nome, descricao, peso in dados:
+        for nome, descricao, peso, escopo in dados:
             criterio, _ = CriterioAvaliacao.objects.get_or_create(
                 nome=nome,
-                defaults={'descricao': descricao, 'peso': peso},
+                defaults={'descricao': descricao, 'peso': peso, 'escopo': escopo},
             )
             criterios.append(criterio)
         return criterios
@@ -516,6 +563,182 @@ class Command(BaseCommand):
                 proposta.status = 'em_avaliacao'
                 proposta.save()
         return alocadas
+
+    def criar_avaliacoes_projeto(self, projetos):
+        """Simula a avaliação por pares de projetos (§3.4).
+
+        Os alvos são escolhidos dinamicamente para respeitar a paridade
+        (quem participa da equipe não avalia o próprio projeto) e cobrem
+        os estados do fluxo: avaliado com um avaliador, avaliado por
+        banca (média final), em avaliação (alocação pendente — aparece
+        no painel do avaliador) e submetido aguardando alocação.
+        """
+        from django.contrib.auth.models import User
+        from apps.core.models import Perfil
+        from apps.editais.views import _recalcular_projeto
+
+        tecnico = User.objects.filter(username='tecnico1').first()
+        docentes_users = list(
+            User.objects.filter(perfil__perfil='docente').order_by('username')
+        )
+        if tecnico is None or not docentes_users:
+            return 0
+
+        def pessoa_id_de(user):
+            perfil = Perfil.objects.filter(user=user).first()
+            return perfil.pessoa_id if perfil else None
+
+        def equipe(projeto):
+            ids = set(projeto.membros.values_list('pessoa_id', flat=True))
+            if projeto.coordenador_id:
+                ids.add(projeto.coordenador_id)
+            return ids
+
+        def disponiveis(projeto):
+            """Usuários docentes aptos a avaliar o projeto (paridade)."""
+            ids_equipe = equipe(projeto)
+            return [
+                u for u in docentes_users
+                if pessoa_id_de(u) not in ids_equipe
+            ]
+
+        def concluir(projeto, avaliador, nota, parecer) -> int:
+            _, created = Avaliacao.objects.get_or_create(
+                tipo='projeto',
+                projeto=projeto,
+                avaliador=avaliador,
+                defaults={
+                    'alocado_por': tecnico,
+                    'status': 'concluida',
+                    'nota': nota,
+                    'parecer': parecer,
+                    'data_conclusao': timezone.now(),
+                },
+            )
+            _recalcular_projeto(projeto)
+            return int(created)
+
+        criadas = 0
+        cobertos = set()
+        candidatos = list(projetos)
+
+        # 1) Projeto ligado a uma proposta do docente demo: recebe um
+        #    avaliador concluído (é a tela de indicação/indicação usada
+        #    na demonstração do indicador de nota)
+        docente1 = next(
+            (u for u in docentes_users if u.username == 'docente1'), None,
+        )
+        perfil_d1 = (
+            Perfil.objects.filter(user=docente1).first()
+            if docente1 is not None else None
+        )
+        alvo_preferido = None
+        if perfil_d1 is not None and perfil_d1.pessoa_id:
+            propostas_d1 = list(
+                Proposta.objects.filter(submetido_por=perfil_d1.pessoa_id)
+                .select_related('projeto')
+            )
+            # Prioridade: proposta com indicações (tela onde o indicador
+            # de nota é exibido) e depois projetos que ele coordena
+            propostas_d1.sort(
+                key=lambda pr: (
+                    0 if pr.indicacoes.exists() else 1,
+                    0 if (
+                        pr.projeto is not None
+                        and pr.projeto.coordenador_id == perfil_d1.pessoa_id
+                    ) else 1,
+                ),
+            )
+            for proposta in propostas_d1:
+                projeto = proposta.projeto
+                if projeto is None or projeto.pk in cobertos:
+                    continue
+                if disponiveis(projeto):
+                    alvo_preferido = projeto
+                    break
+
+        if alvo_preferido is not None:
+            criadas += concluir(
+                alvo_preferido,
+                disponiveis(alvo_preferido)[0],
+                Decimal('8.90'),
+                'Avaliação por pares concluída: objetivos claros e '
+                'boa articulação com a equipe.',
+            )
+            cobertos.add(alvo_preferido.pk)
+            candidatos = [
+                p for p in candidatos if p.pk != alvo_preferido.pk
+            ]
+
+        # 2) Banca com dois avaliadores concluída → média final
+        for projeto in list(candidatos):
+            disp = disponiveis(projeto)
+            if len(disp) >= 2:
+                criadas += concluir(
+                    projeto, disp[0], Decimal('8.40'),
+                    'Avaliação por pares concluída: metodologia adequada.',
+                )
+                criadas += concluir(
+                    projeto, disp[1], Decimal('7.60'),
+                    'Avaliação por pares concluída: cronograma apertado.',
+                )
+                cobertos.add(projeto.pk)
+                candidatos = [
+                    p for p in candidatos if p.pk != projeto.pk
+                ]
+                break
+
+        # 3) Em avaliação: alocação pendente (painel do avaliador)
+        for projeto in list(candidatos):
+            disp = disponiveis(projeto)
+            if disp:
+                _, created = Avaliacao.objects.get_or_create(
+                    tipo='projeto',
+                    projeto=projeto,
+                    avaliador=disp[0],
+                    defaults={'alocado_por': tecnico, 'status': 'alocada'},
+                )
+                _recalcular_projeto(projeto)
+                criadas += int(created)
+                cobertos.add(projeto.pk)
+                candidatos = [
+                    p for p in candidatos if p.pk != projeto.pk
+                ]
+                break
+
+        # 4) Submetido aguardando alocação: preferência para o projeto do
+        #    coordenador demo (tela onde ele envia para avaliação)
+        submetido = next(
+            (
+                p for p in projetos
+                if p.status_avaliacao == 'submetido' and p.pk not in cobertos
+            ),
+            None,
+        )
+        if submetido is None and perfil_d1 is not None and perfil_d1.pessoa_id:
+            submetido = next(
+                (
+                    p for p in projetos
+                    if p.coordenador_id == perfil_d1.pessoa_id
+                    and p.pk not in cobertos
+                    and p.status_avaliacao == 'nao_submetido'
+                ),
+                None,
+            )
+        if submetido is None:
+            submetido = next(
+                (
+                    p for p in projetos
+                    if p.pk not in cobertos
+                    and p.status_avaliacao == 'nao_submetido'
+                ),
+                None,
+            )
+        if submetido is not None:
+            submetido.status_avaliacao = 'submetido'
+            submetido.save()
+
+        return criadas
 
     def criar_comprovantes(self, bolsas, projetos, alunos, docentes):
         for bolsa in bolsas:

@@ -12,7 +12,7 @@ Regras de acesso:
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Case, Count, Value, When
+from django.db.models import Case, Count, F, OrderBy, Value, When
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.timezone import localdate
 from django.views.decorators.cache import never_cache
@@ -214,10 +214,21 @@ def indicacoes_lista(request):
         raise PermissionDenied
 
     indicacoes = indicacoes.select_related(
-        'proposta', 'proposta__edital', 'aluno', 'indicado_por', 'bolsa',
+        'proposta', 'proposta__edital', 'proposta__projeto',
+        'aluno', 'indicado_por', 'bolsa',
     ).annotate(
         ordem=Case(When(status='pendente', then=Value(0)), default=Value(1)),
-    ).order_by('ordem', '-criado_em')
+    ).order_by(
+        # Prioridade automática: pendentes primeiro; dentro de cada grupo,
+        # maior nota de avaliação por pares do projeto primeiro (§3.5)
+        'ordem',
+        OrderBy(
+            F('proposta__projeto__nota'),
+            descending=True,
+            nulls_last=True,
+        ),
+        '-criado_em',
+    )
 
     contexto = {
         'indicacoes': indicacoes,
@@ -278,6 +289,8 @@ def indicacao_implementar(request, pk):
     return render(request, 'bolsas/form.html', {
         'form': form,
         'titulo': f'Implementar bolsa — {indicacao.aluno.nome}',
+        # Indicador de decisão: nota da avaliação por pares do projeto (§3.5)
+        'projeto_indicador': proposta.projeto,
     })
 
 

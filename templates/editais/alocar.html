@@ -7,10 +7,15 @@
     <h2>Alocar avaliador</h2>
 
     <p style="color:#666;">
-        Proposta: <strong>{{ proposta.titulo }}</strong>
-        {% if proposta.edital %} — edital {{ proposta.edital.codigo }}{% endif %}
+        {% if projeto %}
+            Projeto: <strong>{{ projeto.codigo }} — {{ projeto.titulo }}</strong>
+            (avaliação por pares, §3.4)
+        {% else %}
+            Proposta: <strong>{{ proposta.titulo }}</strong>
+            {% if proposta.edital %} — edital {{ proposta.edital.codigo }}{% endif %}
+        {% endif %}
     </p>
-    <p style="color:#666;">Selecione o docente que fará a avaliação. Podem ser alocados vários avaliadores.</p>
+    <p style="color:#666;">Selecione o docente que fará a avaliação. Podem ser alocados vários avaliadores (banca).{% if projeto %} Os membros da equipe do projeto são excluídos da lista.{% endif %}</p>
 
     {% if form.non_field_errors %}
         <div class="alert-error">
@@ -30,7 +35,11 @@
             </p>
         {% endfor %}
         <button type="submit" class="btn">Alocar</button>
-        <a href="{% url 'proposta_detalhe' proposta.pk %}" style="color:#003366; margin-left:15px;">Cancelar</a>
+        {% if projeto %}
+            <a href="{% url 'projeto_detalhe' projeto.pk %}" style="color:#003366; margin-left:15px;">Cancelar</a>
+        {% else %}
+            <a href="{% url 'proposta_detalhe' proposta.pk %}" style="color:#003366; margin-left:15px;">Cancelar</a>
+        {% endif %}
     </form>
 </div>
 {% endblock %}

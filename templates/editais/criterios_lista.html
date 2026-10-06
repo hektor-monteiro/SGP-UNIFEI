@@ -12,7 +12,9 @@
     </div>
     <p style="color:#666; margin-top:10px;">
         Os pesos definem a contribuição de cada critério na nota final,
-        calculada como <strong>média ponderada</strong>.
+        calculada como <strong>média ponderada</strong>. O escopo define
+        onde o critério vale: avaliação de propostas (editais), avaliação
+        por pares de projetos (§3.4) ou ambos.
     </p>
 </div>
 
@@ -21,6 +23,7 @@
         <table>
             <tr>
                 <th>Nome</th>
+                <th>Escopo</th>
                 <th>Descrição</th>
                 <th>Peso</th>
                 <th>Situação</th>
@@ -29,6 +32,7 @@
             {% for criterio in criterios %}
             <tr>
                 <td style="font-weight:bold;">{{ criterio.nome }}</td>
+                <td><span class="badge">{{ criterio.get_escopo_display }}</span></td>
                 <td>{{ criterio.descricao|default:"—"|truncatechars:70 }}</td>
                 <td>{{ criterio.peso }}</td>
                 <td><span class="badge">{{ criterio.ativo|yesno:"Ativo,Inativo" }}</span></td>

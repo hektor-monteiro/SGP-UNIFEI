@@ -19,13 +19,13 @@
 
 {% if avaliacoes_pendentes %}
 <div class="card">
-    <h2>Propostas a avaliar ({{ avaliacoes_pendentes|length }})</h2>
+    <h2>Avaliações a realizar ({{ avaliacoes_pendentes|length }})</h2>
     <table>
-        <tr><th>Proposta</th><th>Edital</th><th>Ação</th></tr>
+        <tr><th>Objeto avaliado</th><th>Referência</th><th>Ação</th></tr>
         {% for av in avaliacoes_pendentes %}
         <tr>
-            <td><a href="{% url 'avaliacao_detalhe' av.pk %}" style="color:#003366; font-weight:bold;">{{ av.proposta.titulo|truncatechars:70 }}</a></td>
-            <td>{{ av.proposta.edital.codigo|default:"—" }}</td>
+            <td><a href="{% url 'avaliacao_detalhe' av.pk %}" style="color:#003366; font-weight:bold;">{% if av.proposta %}{{ av.proposta.titulo|truncatechars:70 }}{% else %}{{ av.projeto.codigo }} — {{ av.projeto.titulo|truncatechars:50 }}{% endif %}</a></td>
+            <td>{% if av.proposta %}{{ av.proposta.edital.codigo|default:"—" }}{% else %}Projeto (avaliação por pares){% endif %}</td>
             <td><a href="{% url 'avaliacao_detalhe' av.pk %}" style="color:#003366;">Realizar avaliação</a></td>
         </tr>
         {% endfor %}

@@ -1,15 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Avaliação de proposta{% endblock %}
+{% block title %}{% if projeto %}Avaliação de projeto{% else %}Avaliação de proposta{% endif %}{% endblock %}
 
 {% block content %}
 <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
         <div>
-            <h2 style="margin-bottom:5px;">Avaliação de proposta</h2>
+            <h2 style="margin-bottom:5px;">{% if projeto %}Avaliação de projeto (por pares){% else %}Avaliação de proposta{% endif %}</h2>
             <p style="margin:0;">
-                <strong>{{ proposta.titulo }}</strong>
-                {% if proposta.edital %} — edital {% if pode_gerir or proposta.edital.status == 'em_andamento' %}<a href="{% url 'edital_detalhe' proposta.edital.pk %}" style="color:#003366;">{{ proposta.edital.codigo }}</a>{% else %}{{ proposta.edital.codigo }}{% endif %}{% endif %}
+                {% if projeto %}
+                    <strong>{{ projeto.codigo }} — {{ projeto.titulo }}</strong>
+                    — coordenador: {{ projeto.coordenador.nome|default:"—" }}
+                {% else %}
+                    <strong>{{ proposta.titulo }}</strong>
+                    {% if proposta.edital %} — edital {% if pode_gerir or proposta.edital.status == 'em_andamento' %}<a href="{% url 'edital_detalhe' proposta.edital.pk %}" style="color:#003366;">{{ proposta.edital.codigo }}</a>{% else %}{{ proposta.edital.codigo }}{% endif %}{% endif %}
+                {% endif %}
             </p>
             <p style="color:#666; margin:5px 0 0;">Avaliador: {{ avaliacao.avaliador.get_full_name|default:avaliacao.avaliador.username }}</p>
         </div>
@@ -20,14 +25,26 @@
             {% endif %}
         </div>
     </div>
+    {% if projeto.nota is not None %}
+        <p style="margin-top:10px; color:#666;">
+            Nota final do projeto (média entre avaliadores): <strong>{{ projeto.nota }}</strong>
+            — situação: <span class="badge">{{ projeto.get_status_avaliacao_display }}</span>
+        </p>
+    {% endif %}
     {% if proposta.nota_final is not None %}
         <p style="margin-top:10px; color:#666;">
             Nota final da proposta (média entre avaliadores): <strong>{{ proposta.nota_final }}</strong>
             — situação: <span class="badge">{{ proposta.get_status_display }}</span>
         </p>
     {% endif %}
-    {% if pode_gerir %}
-        <p style="margin-top:10px;"><a href="{% url 'proposta_detalhe' proposta.pk %}" style="color:#003366;">← Voltar à proposta</a></p>
+    {% if pode_gerir or avaliacao.tipo == 'projeto' %}
+        <p style="margin-top:10px;">
+            {% if projeto %}
+                <a href="{% url 'projeto_detalhe' projeto.pk %}" style="color:#003366;">← Voltar ao projeto</a>
+            {% else %}
+                <a href="{% url 'proposta_detalhe' proposta.pk %}" style="color:#003366;">← Voltar à proposta</a>
+            {% endif %}
+        </p>
     {% endif %}
 </div>
 

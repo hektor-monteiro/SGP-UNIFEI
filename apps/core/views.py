@@ -54,13 +54,14 @@ def dashboard(request):
     contexto = {
         'perfil': perfil,
         'e_superuser': request.user.is_superuser,
-        # Avaliações de propostas alocadas para o usuário e ainda pendentes
+        # Avaliações (propostas e projetos por pares) alocadas para o
+        # usuário e ainda pendentes
         'avaliacoes_pendentes': (
             Avaliacao.objects.filter(
                 avaliador=request.user,
                 status='alocada',
-                tipo='proposta',
-            ).select_related('proposta__edital')
+                tipo__in=('proposta', 'projeto'),
+            ).select_related('proposta__edital', 'projeto')
         ),
         'relatorios_avaliar': relatorios_avaliar.select_related(
             'aluno', 'bolsa__modalidade',

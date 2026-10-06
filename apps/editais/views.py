@@ -168,6 +168,36 @@ def _recalcular_proposta(proposta) -> None:
     proposta.save()
 
 
+def _recalcular_projeto(projeto) -> None:
+    """Reprocessa status de avaliação e nota do projeto (§3.4).
+
+    Regras:
+    - Sem alocações: volta para 'submetido' (a submissão é explícita e
+      não é desfeita aqui) e a nota é apagada.
+    - Com avaliações concluídas: nota = média simples das notas; todas
+      concluídas → 'avaliada', senão → 'em_avaliacao'.
+    """
+    avaliacoes = list(projeto.avaliacoes.all())
+    concluidas = [a for a in avaliacoes if a.status == 'concluida' and a.nota is not None]
+
+    if not avaliacoes:
+        projeto.nota = None
+        if projeto.status_avaliacao != 'nao_submetido':
+            projeto.status_avaliacao = 'submetido'
+    elif not concluidas:
+        projeto.status_avaliacao = 'em_avaliacao'
+        projeto.nota = None
+    else:
+        media = sum((a.nota for a in concluidas), Decimal('0')) / len(concluidas)
+        projeto.nota = media.quantize(Decimal('0.01'))
+        projeto.status_avaliacao = (
+            'avaliada'
+            if len(concluidas) == len(avaliacoes)
+            else 'em_avaliacao'
+        )
+    projeto.save()
+
+
 @login_required
 @never_cache
 def lista(request):
@@ -487,7 +517,7 @@ def proposta_indicar(request, pk):
     bolsa depois, a partir da indicação.
     """
     proposta = get_object_or_404(
-        Proposta.objects.select_related('edital', 'submetido_por'),
+        Proposta.objects.select_related('edital', 'submetido_por', 'projeto'),
         pk=pk,
     )
     perfil = perfil_de(request.user)
@@ -652,23 +682,89 @@ def proposta_alocar(request, pk):
 
 @login_required
 @never_cache
-def avaliacao_detalhe(request, pk):
-    """Formulário de avaliação de proposta (o próprio avaliador preenche).
+def projeto_alocar(request, pk):
+    """Aloca docentes avaliadores de um projeto (somente técnico+).
 
-    Notas de 0 a 10 por critério ativo + parecer; a nota final é a média
-    ponderada pelos pesos dos critérios. Gerentes apenas visualizam.
+    O projeto precisa ter sido enviado para avaliação pelo coordenador.
+    A banca é múltipla; a equipe do projeto (coordenador e membros) é
+    excluída da lista — quem participa não avalia o próprio projeto.
+    """
+    if not pode_gerir(perfil_de(request.user)):
+        raise PermissionDenied
+
+    projeto = get_object_or_404(Projeto, pk=pk)
+
+    if projeto.status_avaliacao == 'nao_submetido':
+        messages.error(
+            request,
+            'O projeto ainda não foi enviado para avaliação por pares.',
+        )
+        return redirect('projeto_detalhe', pk=projeto.pk)
+
+    equipe = set(projeto.membros.values_list('pessoa_id', flat=True))
+    if projeto.coordenador_id:
+        equipe.add(projeto.coordenador_id)
+
+    if request.method == 'POST':
+        form = AlocacaoForm(request.POST, excluir_pessoas=equipe)
+        if form.is_valid():
+            avaliador = form.cleaned_data['avaliador']
+            if Avaliacao.objects.filter(projeto=projeto, avaliador=avaliador).exists():
+                form.add_error(
+                    'avaliador',
+                    'Este docente já está alocado para este projeto.',
+                )
+            else:
+                Avaliacao.objects.create(
+                    tipo='projeto',
+                    projeto=projeto,
+                    avaliador=avaliador,
+                    alocado_por=request.user,
+                    status='alocada',
+                )
+                _recalcular_projeto(projeto)
+                messages.success(
+                    request,
+                    f'Avaliação alocada para {avaliador.get_full_name() or avaliador.username}.',
+                )
+                return redirect('projeto_detalhe', pk=projeto.pk)
+    else:
+        form = AlocacaoForm(excluir_pessoas=equipe)
+
+    return render(request, 'editais/alocar.html', {
+        'form': form,
+        'projeto': projeto,
+    })
+
+
+@login_required
+@never_cache
+def avaliacao_detalhe(request, pk):
+    """Formulário de avaliação (proposta de edital ou projeto por pares).
+
+    Notas de 0 a 10 por critério ativo do escopo + parecer; a nota final
+    é a média ponderada pelos pesos dos critérios. Gerentes apenas
+    visualizam. Os critérios são filtrados pelo escopo do objeto
+    avaliado (proposta x projeto, §3.4).
     """
     avaliacao = get_object_or_404(
-        Avaliacao.objects.select_related('proposta__edital', 'avaliador'),
+        Avaliacao.objects.select_related(
+            'proposta__edital', 'projeto', 'avaliador',
+        ),
         pk=pk,
-        tipo='proposta',
+        tipo__in=('proposta', 'projeto'),
     )
     perfil = perfil_de(request.user)
     sou_avaliador = avaliacao.avaliador_id == request.user.id
     if not sou_avaliador and not pode_gerir(perfil):
         raise PermissionDenied
 
-    criterios = list(CriterioAvaliacao.objects.filter(ativo=True))
+    escopo_avaliacao = 'projeto' if avaliacao.tipo == 'projeto' else 'proposta'
+    criterios = list(
+        CriterioAvaliacao.objects.filter(ativo=True).filter(
+            Q(escopo=escopo_avaliacao) | Q(escopo='ambos'),
+        ).order_by('nome'),
+    )
     notas_existentes = {
         n.criterio_id: n.nota for n in avaliacao.notas.select_related('criterio')
     }
@@ -711,7 +807,10 @@ def avaliacao_detalhe(request, pk):
             avaliacao.status = 'concluida'
             avaliacao.data_conclusao = now()
             avaliacao.save()
-            _recalcular_proposta(avaliacao.proposta)
+            if avaliacao.tipo == 'projeto':
+                _recalcular_projeto(avaliacao.projeto)
+            else:
+                _recalcular_proposta(avaliacao.proposta)
             messages.success(
                 request,
                 f'Avaliação concluída. Nota final (média ponderada): {media}.',
@@ -727,6 +826,7 @@ def avaliacao_detalhe(request, pk):
     contexto = {
         'avaliacao': avaliacao,
         'proposta': avaliacao.proposta,
+        'projeto': avaliacao.projeto,
         'form': form,
         'criterios': criterios,
         'notas_existentes': notas_existentes,
@@ -747,7 +847,19 @@ def avaliacao_remover(request, pk):
     if not pode_gerir(perfil_de(request.user)):
         raise PermissionDenied
 
-    avaliacao = get_object_or_404(Avaliacao, pk=pk, tipo='proposta')
+    avaliacao = get_object_or_404(
+        Avaliacao, pk=pk, tipo__in=('proposta', 'projeto'),
+    )
+    if avaliacao.tipo == 'projeto':
+        projeto = avaliacao.projeto
+        avaliacao.delete()
+        _recalcular_projeto(projeto)
+        messages.success(
+            request,
+            'Alocação removida. Um novo avaliador pode ser alocado.',
+        )
+        return redirect('projeto_detalhe', pk=projeto.pk)
+
     proposta = avaliacao.proposta
     avaliacao.delete()
     _recalcular_proposta(proposta)

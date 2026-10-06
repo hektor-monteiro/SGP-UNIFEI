@@ -80,7 +80,7 @@ class CriterioForm(forms.ModelForm):
 
     class Meta:
         model = CriterioAvaliacao
-        fields = ['nome', 'descricao', 'peso', 'ativo']
+        fields = ['nome', 'escopo', 'descricao', 'peso', 'ativo']
         widgets = {
             'descricao': forms.Textarea(attrs={'rows': 3}),
         }
@@ -93,7 +93,11 @@ class CriterioForm(forms.ModelForm):
 
 
 class AlocacaoForm(forms.Form):
-    """Seleção do docente que vai avaliar a proposta."""
+    """Seleção do docente que vai avaliar a proposta ou o projeto.
+
+    `excluir_pessoas` remove da lista os membros da equipe do projeto
+    (regra de paridade: quem participa não avalia o próprio projeto).
+    """
     avaliador = forms.ModelChoiceField(
         queryset=User.objects.filter(
             perfil__perfil=Perfil.PERFIL_DOCENTE,
@@ -101,6 +105,15 @@ class AlocacaoForm(forms.Form):
         label='Docente avaliador',
         empty_label='— Selecione o docente —',
     )
+
+    def __init__(self, *args, excluir_pessoas=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if excluir_pessoas:
+            self.fields['avaliador'].queryset = (
+                self.fields['avaliador'].queryset.exclude(
+                    perfil__pessoa_id__in=excluir_pessoas,
+                )
+            )
 
 
 class AvaliacaoForm(forms.Form):

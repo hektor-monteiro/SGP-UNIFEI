@@ -68,17 +68,20 @@ class CriterioAvaliacaoTests(TestCase):
             'nome': 'Relevância do tema',
             'descricao': 'Contribuição para a área.',
             'peso': '2.50',
+            'escopo': 'proposta',
             'ativo': 'on',
         })
         self.assertEqual(response.status_code, 302)
         criterio = CriterioAvaliacao.objects.get(nome='Relevância do tema')
         self.assertEqual(criterio.peso, Decimal('2.50'))
         self.assertTrue(criterio.ativo)
+        self.assertEqual(criterio.escopo, 'proposta')
 
     def test_criterio_com_peso_invalido_e_rejeitado(self):
         self.client.login(username='tec_crit', password='x')
         response = self.client.post(reverse('criterio_novo'), {
             'nome': 'Peso zero',
+            'escopo': 'proposta',
             'peso': '0',
         })
         self.assertEqual(response.status_code, 200)
@@ -230,7 +233,7 @@ class AvaliacaoConclusaoTests(TestCase):
     def test_painel_docente_mostra_proposta_pendente_com_link(self):
         self.client.login(username='doc_aval', password='x')
         response = self.client.get(reverse('dashboard'))
-        self.assertContains(response, 'Propostas a avaliar')
+        self.assertContains(response, 'Avaliações a realizar')
         self.assertContains(response, 'Proposta banca')
         self.assertContains(response, 'Realizar avaliação')
 

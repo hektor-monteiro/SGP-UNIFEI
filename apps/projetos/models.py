@@ -111,6 +111,28 @@ class Projeto(TimeStampedModel):
         ('arquivado', 'Arquivado'),
         ('concluido', 'Concluído'),
     ], default='vigente')
+    # Avaliação por pares (§3.4): separada do ciclo de vida do projeto
+    # (status acima). O coordenador envia para avaliação; o técnico aloca
+    # docentes; a nota final alimenta a alocação de bolsas como indicador.
+    status_avaliacao = models.CharField(
+        max_length=15,
+        choices=[
+            ('nao_submetido', 'Não submetido'),
+            ('submetido', 'Submetido'),
+            ('em_avaliacao', 'Em avaliação'),
+            ('avaliada', 'Avaliada'),
+        ],
+        default='nao_submetido',
+        verbose_name='Status da avaliação',
+    )
+    nota = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Nota da avaliação por pares',
+        help_text='Média das notas das avaliações concluídas.',
+    )
     fomentador = models.ForeignKey(Fomentador, on_delete=models.SET_NULL, null=True, blank=True, related_name='projetos')
     recursos_internos = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     recursos_externos = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)

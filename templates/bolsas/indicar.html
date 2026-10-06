@@ -11,6 +11,11 @@
         {% if proposta.projeto %} — projeto {{ proposta.projeto.codigo }}{% endif %}
         <br>Cotas disponíveis para indicação: <strong>{{ disponiveis }}</strong>.
         Após a indicação, o técnico irá implementar a bolsa.
+        <br>
+        <strong>Indicadores:</strong>
+        nota do projeto (avaliação por pares):
+        {% if proposta.projeto.nota is not None %}<strong>{{ proposta.projeto.nota }}</strong>{% else %}—{% endif %}
+        · nota da proposta (avaliação das cotas): {{ proposta.nota_final|default:"—" }}
     </p>
 
     {% if form.non_field_errors %}

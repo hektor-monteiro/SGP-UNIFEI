@@ -44,8 +44,17 @@ class Avaliacao(TimeStampedModel):
         ('proposta', 'Proposta'),
         ('relatorio', 'Relatório'),
         ('edital', 'Edital'),
+        ('projeto', 'Projeto'),
     ])
     proposta = models.ForeignKey(Proposta, on_delete=models.CASCADE, null=True, blank=True, related_name='avaliacoes')
+    projeto = models.ForeignKey(
+        'projetos.Projeto',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='avaliacoes',
+        verbose_name='Projeto',
+    )
     avaliador = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, related_name='avaliacoes')
     alocado_por = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='alocacoes_realizadas')
     status = models.CharField(max_length=10, choices=[
@@ -76,10 +85,22 @@ class CriterioAvaliacao(TimeStampedModel):
     """Critério de avaliação com peso, adotado na média ponderada.
 
     Criado e editado por técnico+; os avaliadores dão notas de 0 a 10
-    para cada critério ativo.
+    para cada critério ativo. O escopo separa os critérios usados na
+    avaliação de propostas (editais) dos usados na avaliação por pares
+    de projetos.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     nome = models.CharField(max_length=100, unique=True)
+    escopo = models.CharField(
+        max_length=10,
+        choices=[
+            ('proposta', 'Propostas (editais)'),
+            ('projeto', 'Projetos (avaliação por pares)'),
+            ('ambos', 'Ambos'),
+        ],
+        default='proposta',
+        verbose_name='Escopo',
+    )
     descricao = models.TextField(blank=True)
     peso = models.DecimalField(
         max_digits=5,

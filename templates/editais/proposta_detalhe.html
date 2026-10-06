@@ -58,6 +58,14 @@
         <tr><th>Cotas solicitadas</th><td>{{ proposta.cotas }}</td></tr>
         <tr><th>Cotas indicadas</th><td>{{ cotas_indicadas }}</td></tr>
         <tr><th>Cotas disponíveis</th><td>{{ cotas_disponiveis }}</td></tr>
+        <tr>
+            <th>Nota da proposta (avaliação das cotas)</th>
+            <td>{{ proposta.nota_final|default:"—" }}</td>
+        </tr>
+        <tr>
+            <th>Nota do projeto (avaliação por pares)</th>
+            <td>{% if proposta.projeto.nota is not None %}<strong>{{ proposta.projeto.nota }}</strong> ({{ proposta.projeto.get_status_avaliacao_display }}){% else %}—{% endif %}</td>
+        </tr>
     </table>
     {% if proposta.indicacoes.all %}
     <table style="margin-top:15px;">
