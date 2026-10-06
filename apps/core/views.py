@@ -51,7 +51,11 @@ def _alocacoes_pendentes() -> list:
         })
     projetos = (
         Projeto.objects.filter(
-            status_avaliacao='submetido', avaliacoes__isnull=True,
+            status_avaliacao='submetido',
+            # Financiamento externo já tem nota 10,00 automática (§3.4):
+            # não há avaliador a alocar
+            nota_automatica=False,
+            avaliacoes__isnull=True,
         ).order_by('data_registro')
     )
     for projeto in projetos:

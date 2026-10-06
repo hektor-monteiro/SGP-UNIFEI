@@ -204,3 +204,21 @@ class NotaAutomaticaViewTests(TestCase):
         self.client.login(username='doc_nav', password='x')
         response = self.client.get(self.url_detalhe)
         self.assertNotContains(response, 'Enviar para avaliação por pares')
+
+    def test_painel_nao_lista_para_alocacao_quem_ja_tem_nota_automatica(self):
+        """Na fila "Aguardando alocação" só entram projetos a avaliar."""
+        hoje = localdate()
+        sem_financiamento = Projeto.objects.create(
+            codigo='PVDI781-2026',
+            titulo='Projeto aguardando avaliação por pares',
+            data_registro=hoje,
+            data_inicio=hoje - timedelta(days=10),
+            coordenador=self.docente.perfil.pessoa,
+            status_avaliacao='submetido',
+        )
+        self.client.login(username='tec_nav', password='x')
+        response = self.client.get(reverse('dashboard'))
+        self.assertContains(response, 'Aguardando alocação de avaliador')
+        # Quem precisa de avaliador aparece; o financiado externamente não
+        self.assertContains(response, sem_financiamento.codigo)
+        self.assertNotContains(response, self.projeto.codigo)
