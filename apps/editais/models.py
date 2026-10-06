@@ -13,7 +13,7 @@ class Edital(TimeStampedModel):
     data_fim = models.DateField()
     status = models.CharField(max_length=15, choices=[
         ('rascunho', 'Rascunho'),
-        ('publicado', 'Publicado'),
+        ('aprovado', 'Aprovado'),
         ('em_andamento', 'Em Andamento'),
         ('encerrado', 'Encerrado'),
         ('cancelado', 'Cancelado'),

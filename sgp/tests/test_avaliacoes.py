@@ -33,14 +33,14 @@ def _criar_usuario(username, perfil, com_pessoa=True):
 
 
 def _criar_edital(**kwargs):
-    """Cria edital publicado e vigente, a menos que informado o contrário."""
+    """Cria edital em andamento e vigente, a menos que informado o contrário."""
     hoje = localdate()
     dados = {
         'codigo': 'EDITAL-AVAL',
         'titulo': 'Edital de avaliação',
         'data_inicio': hoje - timedelta(days=10),
         'data_fim': hoje + timedelta(days=20),
-        'status': 'publicado',
+        'status': 'em_andamento',
     }
     dados.update(kwargs)
     return Edital.objects.create(**dados)

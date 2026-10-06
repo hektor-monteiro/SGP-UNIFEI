@@ -15,7 +15,7 @@ class EditalForm(forms.ModelForm):
     """Formulário de criação/edição de edital.
 
     O status NÃO é editável aqui: muda apenas pelas ações do fluxo
-    (publicar/iniciar/encerrar/cancelar). `criado_por` é definido pela view.
+    (aprovar/iniciar/encerrar/cancelar). `criado_por` é definido pela view.
     """
 
     class Meta:

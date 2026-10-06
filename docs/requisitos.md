@@ -48,9 +48,10 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 ## 3. Entidades do Sistema
 
 ### 3.1 Edital
-- Ciclo de vida: Criação → Publicação → Submissão → Avaliação → Resultado → Execução → Prestação de Contas
+- Ciclo de vida: Criação → Aprovação (Diretoria/Reitoria) → Submissão → Avaliação → Resultado → Execução → Prestação de Contas
 - Pode ser criado sobre demanda (não apenas por calendário)
-- Técnico cria, Diretor/Pro-reitor valida
+- Técnico cria, Diretor/Pro-reitor **aprova** (valida)
+- **Recebe propostas apenas quando "Em Andamento"** e no período informado — após a aprovação, um técnico+ (ou perfil superior) inicia a execução
 
 ### 3.2 Modalidade de Bolsa
 - Configurável pelo técnico (não hardcoded)

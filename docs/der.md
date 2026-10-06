@@ -68,7 +68,7 @@
 | descricao | TEXT | Não | Descrição detalhada |
 | data_inicio | DATE | Sim | Data de abertura |
 | data_fim | DATE | Sim | Data de encerramento |
-| status | ENUM | Sim | Status: `rascunho`, `publicado`, `em_andamento`, `encerrado`, `cancelado` |
+| status | ENUM | Sim | Status: `rascunho`, `aprovado`, `em_andamento`, `encerrado`, `cancelado` |
 | modalidade_id | UUID | FK → ModalidadeBolsa | Modalidade de bolsa associada |
 | criado_por | UUID | FK → Usuário | Técnico que criou |
 | validado_por | UUID | FK → Usuário | Diretor/Pro-reitor que validou |
@@ -469,8 +469,8 @@ ON projeto (processo_sipac_id);
 
 ### Status do Edital
 - `rascunho` — Em elaboração
-- `publicado` — Aberto para submissão
-- `em_andamento` — Em avaliação
+- `aprovado` — Validado pela Diretoria/Reitoria (ainda não recebe propostas)
+- `em_andamento` — Em execução e **aberto para submissão** de propostas
 - `encerrado` — Finalizado
 - `cancelado` — Cancelado
 

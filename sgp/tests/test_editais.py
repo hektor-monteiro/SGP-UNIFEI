@@ -71,7 +71,8 @@ class EditalAcessoTests(TestCase):
             reverse('edital_detalhe', kwargs={'pk': self.edital.pk})
         )
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Publicar e validar')
+        self.assertNotContains(response, 'Aprovar e validar')
+        self.assertNotContains(response, 'Iniciar execução')
 
     def test_tecnico_cria_edital_como_rascunho(self):
         """Técnico cria; status nasce rascunho e criado_por é registrado."""
@@ -110,9 +111,9 @@ class EditalAcessoTests(TestCase):
 
 
 class FluxoEditalTests(TestCase):
-    """Fluxo de vida: rascunho → publicado → em_andamento → encerrado.
+    """Fluxo de vida: rascunho → aprovado → em_andamento → encerrado.
 
-    Publicação exige nível Diretor+ (o técnico propõe, o diretor valida).
+    Aprovação exige nível Diretor+ (o técnico propõe, a Diretoria valida).
     """
 
     def setUp(self):
@@ -128,24 +129,24 @@ class FluxoEditalTests(TestCase):
             follow=follow,
         )
 
-    def test_tecnico_nao_publica(self):
+    def test_tecnico_nao_aprova(self):
         """Técnico não valida a própria criação (requisito §3.1)."""
-        response = self._acao('tec_fluxo', 'publicar')
+        response = self._acao('tec_fluxo', 'aprovar')
         self.assertEqual(response.status_code, 403)
         self.edital.refresh_from_db()
         self.assertEqual(self.edital.status, 'rascunho')
 
-    def test_diretor_publica_com_carimbo_de_validacao(self):
-        response = self._acao('dir_fluxo', 'publicar')
+    def test_diretor_aprova_com_carimbo_de_validacao(self):
+        response = self._acao('dir_fluxo', 'aprovar')
         self.assertEqual(response.status_code, 302)
         self.edital.refresh_from_db()
-        self.assertEqual(self.edital.status, 'publicado')
+        self.assertEqual(self.edital.status, 'aprovado')
         self.assertEqual(self.edital.validado_por.username, 'dir_fluxo')
         self.assertIsNotNone(self.edital.data_validacao)
 
-    def test_fluxo_completo_tecnico_opera_apos_publicacao(self):
-        """publicado → iniciar → em_andamento → encerrar → encerrado."""
-        self._acao('dir_fluxo', 'publicar')
+    def test_fluxo_completo_tecnico_opera_apos_aprovacao(self):
+        """aprovado → iniciar → em_andamento → encerrar → encerrado."""
+        self._acao('dir_fluxo', 'aprovar')
         response = self._acao('tec_fluxo', 'iniciar')
         self.assertEqual(response.status_code, 302)
         self.edital.refresh_from_db()
@@ -153,6 +154,15 @@ class FluxoEditalTests(TestCase):
         self._acao('tec_fluxo', 'encerrar')
         self.edital.refresh_from_db()
         self.assertEqual(self.edital.status, 'encerrado')
+
+    def test_docente_nao_inicia_execucao(self):
+        """Iniciar execução é de técnico+ (docente comum → 403)."""
+        _criar_usuario('doc_fluxo', Perfil.PERFIL_DOCENTE)
+        self._acao('dir_fluxo', 'aprovar')
+        response = self._acao('doc_fluxo', 'iniciar')
+        self.assertEqual(response.status_code, 403)
+        self.edital.refresh_from_db()
+        self.assertEqual(self.edital.status, 'aprovado')
 
     def test_transicao_invalida_e_bloqueada_com_mensagem(self):
         """Não é possível iniciar um rascunho; status não muda."""
@@ -165,7 +175,7 @@ class FluxoEditalTests(TestCase):
         """Ações mudam estado: somente POST."""
         self.client.login(username='dir_fluxo', password='x')
         response = self.client.get(
-            reverse('edital_acao', kwargs={'pk': self.edital.pk, 'acao': 'publicar'})
+            reverse('edital_acao', kwargs={'pk': self.edital.pk, 'acao': 'aprovar'})
         )
         self.assertEqual(response.status_code, 405)
 
@@ -174,7 +184,7 @@ class FluxoEditalTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_aluno_nao_executa_acoes(self):
-        response = self._acao('alu_fluxo', 'publicar')
+        response = self._acao('alu_fluxo', 'aprovar')
         self.assertEqual(response.status_code, 403)
         response = self._acao('alu_fluxo', 'cancelar')
         self.assertEqual(response.status_code, 403)
@@ -182,7 +192,7 @@ class FluxoEditalTests(TestCase):
         self.assertEqual(self.edital.status, 'rascunho')
 
     def test_cancelar_e_permitido_para_tecnico(self):
-        self._acao('dir_fluxo', 'publicar')
+        self._acao('dir_fluxo', 'aprovar')
         self._acao('tec_fluxo', 'cancelar')
         self.edital.refresh_from_db()
         self.assertEqual(self.edital.status, 'cancelado')

@@ -28,7 +28,7 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | Editar projeto/bolsa | — | só os que coordena | ✅ | ✅ | ✅ | ✅ |
 | Gerenciar equipe (membros) | — | só do projeto que coordena | ✅ | ✅ | ✅ | ✅ |
 | Criar/editar edital, critérios, modalidades | — | — | ✅ | ✅ | ✅ | ✅ |
-| **Publicar** edital | — | — | — | ✅ | ✅ | ✅ |
+| **Aprovar** edital (Diretoria/Reitoria) | — | — | — | ✅ | ✅ | ✅ |
 | Iniciar/encerrar/cancelar edital | — | — | ✅ | ✅ | ✅ | ✅ |
 | Submeter proposta a edital | ✅ | ✅ | — | — | — | — |
 | Editar proposta (até decisão) | própria | própria | ✅ | ✅ | ✅ | ✅ |
@@ -105,8 +105,8 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 |---|---|---|---|
 | `/editais/` e `/editais/<pk>/` | visualizar | autenticado | propostas: téc+ todas; demais só as próprias |
 | `/editais/novo/`, `/editar/` | criar/editar | **téc+** | cria como `rascunho`; status só via ações |
-| `/editais/<pk>/acao/<acao>/` (POST) | fluxo | `publicar` → **diretor+**; `iniciar/encerrar/cancelar` → téc+ | origem/destino do status validados |
-| `/editais/<pk>/propostas/nova/` | criar | **somente aluno ou docente** | téc+ e superusuário → 403 (não são submetentes); exige edital publicado/em andamento no período e Pessoa vinculada |
+| `/editais/<pk>/acao/<acao>/` (POST) | fluxo | `aprovar` → **diretor+**; `iniciar/encerrar/cancelar` → téc+ | origem/destino do status validados |
+| `/editais/<pk>/propostas/nova/` | criar | **somente aluno ou docente** | téc+ e superusuário → 403 (não são submetentes); exige edital em andamento e no período e Pessoa vinculada |
 | `/propostas/<pk>/` | visualizar | téc+ OU submetente OU avaliador alocado | senão 403 |
 | `/propostas/<pk>/editar/` | editar | téc+ ou submetente | só enquanto `submetida` |
 | `/propostas/<pk>/alocar/` | editar | **téc+** | banca múltipla; remoção/realocação |

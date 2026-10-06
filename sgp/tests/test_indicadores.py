@@ -75,7 +75,7 @@ class IndicadoresBase(TestCase):
         self.edital = Edital.objects.create(
             codigo='EDT-IND-2026', titulo='Edital indicadores 2026',
             data_inicio=date(2026, 3, 1), data_fim=date(2026, 4, 1),
-            status='publicado', modalidade=self.modalidade,
+            status='aprovado', modalidade=self.modalidade,
         )
         Proposta.objects.create(
             titulo='Proposta aprovada', edital=self.edital, submetido_por=self.aluno1,

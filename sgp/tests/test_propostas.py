@@ -27,14 +27,14 @@ def _criar_usuario(username, perfil, com_pessoa=True):
 
 
 def _criar_edital(**kwargs):
-    """Cria edital publicado e vigente, a menos que informado o contrário."""
+    """Cria edital em andamento e vigente, a menos que informado o contrário."""
     hoje = localdate()
     dados = {
         'codigo': 'EDITAL-ABERTO',
         'titulo': 'Edital aberto de teste',
         'data_inicio': hoje - timedelta(days=10),
         'data_fim': hoje + timedelta(days=20),
-        'status': 'publicado',
+        'status': 'em_andamento',
     }
     dados.update(kwargs)
     return Edital.objects.create(**dados)
@@ -74,7 +74,7 @@ class SubmissaoPropostaTests(TestCase):
         self.client.login(username='tec_prop', password='x')
         self.assertEqual(self.client.get(self.url).status_code, 403)
 
-    def test_submissao_bloqueada_em_edital_nao_publicado(self):
+    def test_submissao_bloqueada_em_edital_rascunho(self):
         rascunho = _criar_edital(codigo='RASCUNHO-01', status='rascunho')
         self.client.login(username='alu_prop', password='x')
         response = self.client.post(
@@ -84,6 +84,44 @@ class SubmissaoPropostaTests(TestCase):
         )
         self.assertContains(response, 'não está aberto para submissões')
         self.assertFalse(Proposta.objects.filter(titulo='Proposta a rascunho').exists())
+
+    def test_submissao_bloqueada_em_edital_aprovado_nao_iniciado(self):
+        """Edital aprovado (validado) não recebe propostas até o iniciar."""
+        aprovado = _criar_edital(codigo='APROVADO-01', status='aprovado')
+        self.client.login(username='alu_prop', password='x')
+        response = self.client.post(
+            reverse('proposta_nova', kwargs={'pk': aprovado.pk}),
+            {'titulo': 'Proposta antes da execução'},
+            follow=True,
+        )
+        self.assertContains(response, 'não está aberto para submissões')
+        self.assertFalse(
+            Proposta.objects.filter(titulo='Proposta antes da execução').exists(),
+        )
+
+    def test_submissao_liberada_apos_tecnico_iniciar_execucao(self):
+        """Aprovado → técnico inicia → a submissão passa a ser aceita."""
+        aprovado = _criar_edital(codigo='INICIAR-01', status='aprovado')
+        self.client.login(username='alu_prop', password='x')
+        url = reverse('proposta_nova', kwargs={'pk': aprovado.pk})
+        bloqueio = self.client.post(
+            url, {'titulo': 'Antes de iniciar'}, follow=True,
+        )
+        self.assertContains(bloqueio, 'não está aberto para submissões')
+        self.assertFalse(Proposta.objects.filter(titulo='Antes de iniciar').exists())
+
+        self.client.login(username='tec_prop', password='x')
+        iniciou = self.client.post(
+            reverse('edital_acao', kwargs={'pk': aprovado.pk, 'acao': 'iniciar'}),
+        )
+        self.assertEqual(iniciou.status_code, 302)
+        aprovado.refresh_from_db()
+        self.assertEqual(aprovado.status, 'em_andamento')
+
+        self.client.login(username='alu_prop', password='x')
+        aceitou = self.client.post(url, {'titulo': 'Depois de iniciar'})
+        self.assertEqual(aceitou.status_code, 302)
+        self.assertTrue(Proposta.objects.filter(titulo='Depois de iniciar').exists())
 
     def test_submissao_bloqueada_fora_do_periodo(self):
         encerrado = _criar_edital(

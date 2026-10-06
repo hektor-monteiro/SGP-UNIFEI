@@ -1,18 +1,19 @@
 """Views do módulo de Editais.
 
 Fluxo de vida (requisito §3.1):
-    rascunho → publicado → em_andamento → encerrado
+    rascunho → aprovado → em_andamento → encerrado
                  (qualquer status operacional pode ir para cancelado)
 
 Permissões:
 - Lista/Detalhe: todos os autenticados (editais são informativos).
 - Criação/Edição: técnico, diretor, pro-reitor (o técnico cria).
-- Publicar/validar: SOMENTE diretor ou pro-reitor (requisito: "Técnico cria,
+- Aprovar/validar: SOMENTE diretor ou pro-reitor (requisito: "Técnico cria,
   Diretor/Pro-reitor valida") — carimba validado_por/data_validacao.
 - Iniciar/Encerrar/Cancelar: técnico+.
 
 Propostas (submissão a editais):
-- Submissão: aluno ou docente, a edital publicado/em andamento e no período.
+- Submissão: aluno ou docente, a edital em andamento e no período —
+  edital aprovado (ainda não iniciado) NÃO recebe submissões.
 - Detalhe/Edição: submetente ou técnico+; edição somente enquanto "submetida".
 - Listagem no edital: técnico+ vê todas; demais veem apenas as próprias.
 """
@@ -42,29 +43,29 @@ from .models import Avaliacao, CriterioAvaliacao, Edital, NotaCriterio
 
 # Ações do fluxo: origens permitidas, destino, nível mínimo e rótulo
 ACOES = {
-    'publicar': {
+    'aprovar': {
         'origens': ('rascunho',),
-        'destino': 'publicado',
+        'destino': 'aprovado',
         'nivel': Perfil.PERFIL_DIRETOR,
-        'rotulo': 'Publicar e validar',
-        'mensagem': 'publicado e validado',
+        'rotulo': 'Aprovar e validar',
+        'mensagem': 'aprovado e validado',
     },
     'iniciar': {
-        'origens': ('publicado',),
+        'origens': ('aprovado',),
         'destino': 'em_andamento',
         'nivel': Perfil.PERFIL_TECNICO,
         'rotulo': 'Iniciar execução',
         'mensagem': 'em andamento',
     },
     'encerrar': {
-        'origens': ('publicado', 'em_andamento'),
+        'origens': ('aprovado', 'em_andamento'),
         'destino': 'encerrado',
         'nivel': Perfil.PERFIL_TECNICO,
         'rotulo': 'Encerrar',
         'mensagem': 'encerrado',
     },
     'cancelar': {
-        'origens': ('rascunho', 'publicado', 'em_andamento'),
+        'origens': ('rascunho', 'aprovado', 'em_andamento'),
         'destino': 'cancelado',
         'nivel': Perfil.PERFIL_TECNICO,
         'rotulo': 'Cancelar edital',
@@ -82,10 +83,14 @@ def _pode_executar(user, acao: str) -> bool:
 
 
 def _edital_aberto_para_submissao(edital) -> bool:
-    """Edital aceita submissões: publicado/em andamento e dentro do período."""
+    """Edital aceita submissões: em andamento e dentro do período.
+
+    Edital aprovado (validado, mas ainda não iniciado) não recebe
+    propostas — é preciso estar em execução (requisito §3.1).
+    """
     hoje = localdate()
     return (
-        edital.status in ('publicado', 'em_andamento')
+        edital.status == 'em_andamento'
         and edital.data_inicio <= hoje <= edital.data_fim
     )
 
@@ -284,7 +289,7 @@ def acao(request, pk, acao):
         return redirect('edital_detalhe', pk=edital.pk)
 
     edital.status = cfg['destino']
-    if acao == 'publicar':
+    if acao == 'aprovar':
         edital.validado_por = request.user
         edital.data_validacao = now()
     edital.save()

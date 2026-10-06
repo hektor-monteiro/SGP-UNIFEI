@@ -404,7 +404,7 @@ class Command(BaseCommand):
                     'descricao': f'Edital para seleção de propostas {modalidade.sigla}',
                     'data_inicio': datetime.now() - timedelta(days=30),
                     'data_fim': datetime.now() + timedelta(days=60),
-                    'status': random.choice(['publicado', 'em_andamento', 'encerrado']),
+                    'status': random.choice(['aprovado', 'em_andamento', 'encerrado']),
                     'modalidade': modalidade,
                 }
             )
