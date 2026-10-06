@@ -16,21 +16,17 @@ class PlanoTrabalhoForm(forms.ModelForm):
     - Aluno e projeto são derivados da bolsa selecionada (coerência garantida:
       plano ↔ bolsa ↔ projeto do docente)
     - Aluno não altera o status (campo desabilitado pela view)
+    - `resumo` obrigatório (alimenta a busca) e PDF obrigatório para sair
+      de 'rascunho' (é o documento que o orientador/DIP leem)
     """
 
     class Meta:
         model = PlanoTrabalho
         fields = [
-            'bolsa', 'titulo', 'descricao', 'objetivos',
-            'metodologia', 'cronograma', 'status',
+            'bolsa', 'titulo', 'resumo', 'arquivo_pdf', 'status',
         ]
         widgets = {
-            'descricao': forms.Textarea(attrs={'rows': 3}),
-            'objetivos': forms.Textarea(attrs={'rows': 3}),
-            'metodologia': forms.Textarea(attrs={'rows': 3}),
-            'cronograma': forms.Textarea(
-                attrs={'rows': 4, 'placeholder': '{"Semana 1": "Revisão bibliográfica", ...}'},
-            ),
+            'resumo': forms.Textarea(attrs={'rows': 3}),
         }
 
     def __init__(self, *args, bolsas=None, pode_mudar_status=True, **kwargs):
@@ -39,6 +35,10 @@ class PlanoTrabalhoForm(forms.ModelForm):
         if bolsas is not None:
             self.fields['bolsa'].queryset = bolsas
         self.fields['bolsa'].empty_label = '— Selecione a bolsa —'
+        # Resumo é o texto que alimenta a busca do sistema: obrigatório
+        self.fields['resumo'].required = True
+        # PDF: obrigatório na submissão (validado em clean por status)
+        self.fields['arquivo_pdf'].required = False
         if not pode_mudar_status:
             # Aluno mantém o status atual (submissão/aprovação é do docente/DIP)
             self.fields['status'].disabled = True
@@ -56,6 +56,21 @@ class PlanoTrabalhoForm(forms.ModelForm):
                     f'A bolsa de {bolsa.aluno.nome} em {bolsa.projeto.codigo} '
                     'já possui plano de trabalho.'
                 )
+
+        # PDF obrigatório para submeter (qualquer status além de rascunho).
+        # `arquivo_pdf` em cleaned_data traz o arquivo novo OU o já anexado;
+        # se o próprio arquivo estiver inválido, o erro de campo já basta.
+        status = cleaned.get('status')
+        if (
+            status
+            and status != 'rascunho'
+            and 'arquivo_pdf' not in self.errors
+            and not cleaned.get('arquivo_pdf')
+        ):
+            raise ValidationError(
+                'Anexe o PDF do plano de trabalho (campo "Documento (PDF)") '
+                'antes de submeter.',
+            )
         return cleaned
 
     def save(self, commit=True):
@@ -64,8 +79,6 @@ class PlanoTrabalhoForm(forms.ModelForm):
         if instance.bolsa_id:
             instance.aluno = instance.bolsa.aluno
             instance.projeto = instance.bolsa.projeto
-        if instance.cronograma is None:
-            instance.cronograma = {}
         if instance.status in ('submetido', 'aprovado', 'reprovado') and not instance.data_submissao:
             instance.data_submissao = timezone.now()
         if instance.status == 'aprovado' and not instance.data_aprovacao:

@@ -1,9 +1,11 @@
 import random
 from decimal import Decimal
 from datetime import datetime, timedelta
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from apps.core.models import Instituicao, Fomentador
+from apps.core.pdf_demo import gerar_pdf
 from apps.projetos.models import Pessoa, Projeto, Proposta
 from apps.bolsas.models import ModalidadeBolsa, Bolsa, Indicacao
 from apps.editais.models import Edital, Avaliacao, CriterioAvaliacao
@@ -294,6 +296,20 @@ class Command(BaseCommand):
                     ),
                 }
             )
+            if created:
+                # Todo projeto do demo nasce com o documento em PDF anexado
+                projeto.arquivo_pdf.save(
+                    'projeto.pdf',
+                    ContentFile(gerar_pdf(
+                        f'Projeto {codigo} - {titulo}',
+                        [
+                            f'Coordenador(a): {projeto.coordenador.nome if projeto.coordenador else "-"}',
+                            'Projeto de pesquisa registrado na DIP/UNIFEI.',
+                            'Documento gerado para demonstracao do SGP-UNIFEI.',
+                        ],
+                    )),
+                    save=True,
+                )
             projetos.append(projeto)
         return projetos
 
@@ -401,18 +417,34 @@ class Command(BaseCommand):
 
     def criar_planos_trabalho(self, bolsas, alunos):
         for bolsa in bolsas:
-            PlanoTrabalho.objects.get_or_create(
+            plano, criado = PlanoTrabalho.objects.get_or_create(
                 bolsa=bolsa,
                 defaults={
                     'aluno': bolsa.aluno,
                     'projeto': bolsa.projeto,
                     'titulo': f'Plano de Trabalho - {bolsa.modalidade.sigla}',
-                    'descricao': 'Plano de trabalho para iniciação científica',
-                    'objetivos': 'Desenvolver pesquisa científica na área de estudo',
-                    'metodologia': 'Revisão bibliográfica, experimentação e análise de dados',
+                    'resumo': (
+                        'Plano de trabalho para iniciação científica: '
+                        'desenvolvimento de pesquisa na área de estudo.'
+                    ),
                     'status': random.choice(['rascunho', 'submetido', 'aprovado']),
                 }
             )
+            # Submetido/aprovado já têm o documento em PDF anexado
+            if criado and plano.status != 'rascunho' and not plano.arquivo_pdf:
+                plano.arquivo_pdf.save(
+                    f'plano-{bolsa.modalidade.sigla.lower()}.pdf',
+                    ContentFile(gerar_pdf(
+                        f'Plano de Trabalho - {bolsa.modalidade.sigla}',
+                        [
+                            f'Aluno(a): {bolsa.aluno.nome}',
+                            f'Projeto: {bolsa.projeto.codigo} - {bolsa.projeto.titulo}',
+                            'Atividades: revisao bibliografica, coleta e analise de dados.',
+                            'Cronograma: 12 meses, com relatorio parcial no 6o mes.',
+                        ],
+                    )),
+                    save=True,
+                )
 
     def criar_relatorios(self, bolsas, alunos):
         """Cria um parcial e um final por bolsa, coerentes com o fluxo:
@@ -431,12 +463,15 @@ class Command(BaseCommand):
                 agora = timezone.now()
                 # Só cria se ainda não existir (parciais podem se repetir na base)
                 if not Relatorio.objects.filter(bolsa=bolsa, tipo=tipo).exists():
-                    Relatorio.objects.create(
+                    relatorio = Relatorio.objects.create(
                         bolsa=bolsa,
                         tipo=tipo,
                         aluno=bolsa.aluno,
                         titulo=f'Relatório {tipo.capitalize()} - {bolsa.modalidade.sigla}',
-                        conteudo=f'Conteúdo do relatório {tipo}...',
+                        resumo=(
+                            f'Relatório {tipo} apresentando os resultados obtidos '
+                            'no período, em anexo em PDF.'
+                        ),
                         status=status,
                         nota=nota,
                         observacoes='Avaliação de demonstração.' if avaliado else '',
@@ -444,6 +479,21 @@ class Command(BaseCommand):
                         data_avaliacao=agora if avaliado else None,
                         data_submissao=agora if status != 'rascunho' else None,
                     )
+                    # Submetido/avaliado já têm o relatório em PDF anexado
+                    if status != 'rascunho':
+                        relatorio.arquivo_pdf.save(
+                            f'relatorio-{tipo}.pdf',
+                            ContentFile(gerar_pdf(
+                                f'Relatório {tipo.capitalize()} - {bolsa.modalidade.sigla}',
+                                [
+                                    f'Aluno(a): {bolsa.aluno.nome}',
+                                    f'Projeto: {bolsa.projeto.codigo}',
+                                    'Periodo apresentado e resultados obtidos nas atividades.',
+                                    'Documento gerado para demonstracao do SGP-UNIFEI.',
+                                ],
+                            )),
+                            save=True,
+                        )
 
     def criar_editais(self, modalidades):
         editais = []

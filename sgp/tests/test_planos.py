@@ -2,6 +2,7 @@
 from datetime import date
 
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
@@ -10,6 +11,12 @@ from apps.projetos.models import Pessoa, Projeto
 
 from apps.bolsas.models import Bolsa, ModalidadeBolsa
 from apps.relatorios.models import PlanoTrabalho
+from sgp.tests.arquivos_teste import PDF_EXEMPLO, MediaTemporariaMixin
+
+
+def _pdf(conteudo=None):
+    """PDF mínimo para os payloads de teste (assinatura %PDF- presente)."""
+    return SimpleUploadedFile('plano.pdf', conteudo or PDF_EXEMPLO)
 
 
 def _criar_usuario(username, perfil, pessoa=None):
@@ -22,19 +29,17 @@ def _dados_plano(bolsa, **extras):
     dados = {
         'bolsa': bolsa.pk,
         'titulo': 'Plano de trabalho do aluno',
-        'descricao': 'Descrição do plano',
-        'objetivos': 'Objetivos do plano',
-        'metodologia': 'Metodologia',
-        'cronograma': '{"Semana 1": "Revisão bibliográfica"}',
+        'resumo': 'Resumo do plano de trabalho para a busca do sistema.',
     }
     dados.update(extras)
     return dados
 
 
-class PlanoAcessoTests(TestCase):
+class PlanoAcessoTests(MediaTemporariaMixin, TestCase):
     """Testes de acesso às views de planos de trabalho."""
 
     def setUp(self):
+        super().setUp()
         inst, _ = Instituicao.objects.get_or_create(sigla='IMC', defaults={'nome': 'IMC'})
         self.modalidade, _ = ModalidadeBolsa.objects.get_or_create(
             sigla='PIBIC', defaults={'nome': 'Iniciação Científica'},
@@ -186,11 +191,16 @@ class PlanoAcessoTests(TestCase):
         self.assertContains(response, 'escolha válida')
 
     def test_tecnico_aprova_plano_com_carimbo(self):
-        """Técnico aprova via edição; data_aprovacao é carimbada."""
+        """Técnico aprova via edição; data_aprovacao é carimbada.
+
+        Status além de 'rascunho' exige o PDF anexado (submissão em PDF).
+        """
         self.client.login(username='tec_plano', password='x')
         response = self.client.post(
             reverse('plano_editar', kwargs={'pk': self.plano.pk}),
-            _dados_plano(self.bolsa_com_plano, status='aprovado'),
+            _dados_plano(
+                self.bolsa_com_plano, status='aprovado', arquivo_pdf=_pdf(),
+            ),
         )
         self.assertEqual(response.status_code, 302)
         self.plano.refresh_from_db()

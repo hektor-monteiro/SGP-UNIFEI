@@ -8,6 +8,7 @@ urlpatterns = [
     path('planos/novo/', views.novo, name='plano_novo'),
     path('planos/<uuid:pk>/', views.detalhe, name='plano_detalhe'),
     path('planos/<uuid:pk>/editar/', views.editar, name='plano_editar'),
+    path('planos/<uuid:pk>/arquivo/', views.arquivo_plano, name='plano_arquivo'),
     path('relatorios/', views.lista_relatorios, name='relatorios_lista'),
     path('relatorios/novo/', views.novo_relatorio, name='relatorio_novo'),
     path('relatorios/<uuid:pk>/', views.detalhe_relatorio, name='relatorio_detalhe'),

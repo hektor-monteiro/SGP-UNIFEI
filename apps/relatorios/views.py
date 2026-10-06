@@ -25,13 +25,14 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncYear
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from apps.bolsas.models import Bolsa
+from apps.core.arquivos import servir_pdf
 from apps.core.models import Perfil
 from apps.core.permissions import perfil_de, perfil_required, pode_gerir
 from apps.editais.models import Edital
@@ -103,6 +104,18 @@ def _muda_status(user, plano) -> bool:
     )
 
 
+def _pode_ver_plano(user, plano) -> None:
+    """Levanta PermissionDenied se o usuário não pode ver o plano.
+
+    Aluno só vê os próprios planos (LGPD); demais perfis veem todos.
+    Usada pelo detalhe e pela entrega do PDF do plano.
+    """
+    perfil = perfil_de(user)
+    if perfil and perfil.perfil == Perfil.PERFIL_ALUNO:
+        if not perfil.pessoa or plano.aluno_id != perfil.pessoa.id:
+            raise PermissionDenied
+
+
 @login_required
 @never_cache
 def lista(request):
@@ -114,7 +127,10 @@ def lista(request):
     if status:
         planos = planos.filter(status=status)
     if busca:
-        planos = planos.filter(titulo__icontains=busca)
+        # Busca por título ou resumo (resumo é o texto curto da busca)
+        planos = planos.filter(
+            Q(titulo__icontains=busca) | Q(resumo__icontains=busca)
+        )
 
     perfil = perfil_de(request.user)
     gerir = pode_gerir(perfil)
@@ -153,11 +169,8 @@ def detalhe(request, pk):
         pk=pk,
     )
 
-    perfil = perfil_de(request.user)
     # Aluno só vê os próprios planos
-    if perfil and perfil.perfil == Perfil.PERFIL_ALUNO:
-        if not perfil.pessoa or plano.aluno_id != perfil.pessoa.id:
-            raise PermissionDenied
+    _pode_ver_plano(request.user, plano)
 
     contexto = {
         'plano': plano,
@@ -165,6 +178,17 @@ def detalhe(request, pk):
         'muda_status': _muda_status(request.user, plano),
     }
     return render(request, 'planos/detalhe.html', contexto)
+
+
+@login_required
+@never_cache
+def arquivo_plano(request, pk):
+    """Entrega o PDF do plano de trabalho com a permissão do detalhe."""
+    plano = get_object_or_404(PlanoTrabalho, pk=pk)
+    _pode_ver_plano(request.user, plano)
+    if not plano.arquivo_pdf:
+        raise Http404('Este plano de trabalho não tem documento anexado.')
+    return servir_pdf(plano.arquivo_pdf.path)
 
 
 @login_required
@@ -184,7 +208,7 @@ def novo(request):
 
     if request.method == 'POST':
         form = PlanoTrabalhoForm(
-            request.POST, bolsas=bolsas, pode_mudar_status=pode_mudar,
+            request.POST, request.FILES, bolsas=bolsas, pode_mudar_status=pode_mudar,
         )
         if form.is_valid():
             plano = form.save()
@@ -215,7 +239,7 @@ def editar(request, pk):
 
     if request.method == 'POST':
         form = PlanoTrabalhoForm(
-            request.POST, instance=plano,
+            request.POST, request.FILES, instance=plano,
             bolsas=bolsas, pode_mudar_status=pode_mudar,
         )
         if form.is_valid():

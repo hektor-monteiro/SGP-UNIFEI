@@ -1,23 +1,42 @@
 from django.db import models
 import uuid
-from apps.core.models import TimeStampedModel
+from apps.core.models import ModeloComArquivo, TimeStampedModel
+from apps.core.validators import validar_pdf
 from apps.projetos.models import Pessoa, Projeto
 from apps.bolsas.models import Bolsa
 
-class PlanoTrabalho(TimeStampedModel):
+class PlanoTrabalho(TimeStampedModel, ModeloComArquivo):
     """Plano de trabalho do aluno, associado à bolsa E ao projeto do docente.
 
     aluno e projeto são derivados da bolsa (formulário garante a coerência).
+    O conteúdo completo fica no PDF anexado; no sistema ficam apenas os
+    metadados e o `resumo` (texto curto que alimenta a busca).
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     bolsa = models.OneToOneField(Bolsa, on_delete=models.CASCADE, related_name='plano_trabalho')
     projeto = models.ForeignKey(Projeto, on_delete=models.CASCADE, related_name='planos_trabalho')
     aluno = models.ForeignKey(Pessoa, on_delete=models.CASCADE, related_name='planos_trabalho')
     titulo = models.CharField(max_length=255)
-    descricao = models.TextField(blank=True)
-    objetivos = models.TextField(blank=True)
-    metodologia = models.TextField(blank=True)
-    cronograma = models.JSONField(default=dict, blank=True)
+    resumo = models.TextField(
+        max_length=1000,
+        blank=True,
+        verbose_name='Resumo',
+        help_text=(
+            'Texto curto (até 1000 caracteres) exibido na tela e usado '
+            'na busca do sistema.'
+        ),
+    )
+    arquivo_pdf = models.FileField(
+        upload_to='uploads/planos/%Y/%m/',
+        blank=True,
+        validators=[validar_pdf],
+        verbose_name='Documento (PDF)',
+        help_text=(
+            'Plano de trabalho completo em PDF (até 15 MB). Obrigatório '
+            'para submeter (status diferente de Rascunho).'
+        ),
+    )
+    campo_arquivo = 'arquivo_pdf'
     status = models.CharField(max_length=15, choices=[
         ('rascunho', 'Rascunho'),
         ('submetido', 'Submetido'),

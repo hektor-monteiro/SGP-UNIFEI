@@ -33,22 +33,19 @@
 </div>
 
 <div class="card">
-    <h2>Conteúdo</h2>
+    <h2>Resumo e documento</h2>
     <table>
-        {% if plano.descricao %}
-        <tr><th style="width:220px;">Descrição</th><td>{{ plano.descricao|linebreaksbr }}</td></tr>
-        {% endif %}
-        {% if plano.objetivos %}
-        <tr><th>Objetivos</th><td>{{ plano.objetivos|linebreaksbr }}</td></tr>
-        {% endif %}
-        {% if plano.metodologia %}
-        <tr><th>Metodologia</th><td>{{ plano.metodologia|linebreaksbr }}</td></tr>
+        {% if plano.resumo %}
+        <tr><th style="width:220px;">Resumo</th><td>{{ plano.resumo|linebreaksbr }}</td></tr>
         {% endif %}
         <tr>
-            <th>Cronograma</th>
+            <th>Documento (PDF)</th>
             <td>
-                {% if plano.cronograma %}
-                    <pre style="background:#f5f7fa; padding:10px; border-radius:4px; white-space:pre-wrap;">{{ plano.cronograma }}</pre>
+                {% if plano.arquivo_pdf %}
+                    <a href="{% url 'plano_arquivo' plano.pk %}" style="color:#003366;">Abrir o PDF do plano de trabalho</a>
+                    <span style="color:#666; font-size:0.85rem;">(exibido em uma nova aba)</span>
+                {% elif pode_editar %}
+                    <span style="color:#666;">Nenhum PDF anexado — anexe em "Editar". O PDF é obrigatório para submeter.</span>
                 {% else %}—{% endif %}
             </td>
         </tr>
