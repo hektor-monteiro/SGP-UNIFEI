@@ -97,13 +97,18 @@ class RelatorioForm(forms.ModelForm):
     - Aluno é derivado da bolsa selecionada (coerência garantida)
     - Status, nota e observações NÃO são campos do formulário: o fluxo é
       feito por ações dedicadas (submeter/avaliar) nas views
+    - `resumo` obrigatório (alimenta a busca); o PDF é obrigatório na
+      submissão (validado na view `submeter_relatorio`)
     """
 
     class Meta:
         model = Relatorio
-        fields = ['bolsa', 'tipo', 'titulo', 'conteudo', 'periodo_inicio', 'periodo_fim']
+        fields = [
+            'bolsa', 'tipo', 'titulo', 'resumo', 'arquivo_pdf',
+            'periodo_inicio', 'periodo_fim',
+        ]
         widgets = {
-            'conteudo': forms.Textarea(attrs={'rows': 6}),
+            'resumo': forms.Textarea(attrs={'rows': 4}),
             'periodo_inicio': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'periodo_fim': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
         }
@@ -115,6 +120,10 @@ class RelatorioForm(forms.ModelForm):
             self.fields['bolsa'].queryset = bolsas
         self.fields['bolsa'].empty_label = '— Selecione a bolsa —'
         self.fields['tipo'].empty_label = '— Selecione o tipo —'
+        # Resumo é o texto que alimenta a busca do sistema: obrigatório
+        self.fields['resumo'].required = True
+        # PDF: obrigatório apenas na submissão (view `submeter_relatorio`)
+        self.fields['arquivo_pdf'].required = False
 
     def clean(self):
         cleaned = super().clean()

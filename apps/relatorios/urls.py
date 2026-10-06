@@ -13,6 +13,7 @@ urlpatterns = [
     path('relatorios/novo/', views.novo_relatorio, name='relatorio_novo'),
     path('relatorios/<uuid:pk>/', views.detalhe_relatorio, name='relatorio_detalhe'),
     path('relatorios/<uuid:pk>/editar/', views.editar_relatorio, name='relatorio_editar'),
+    path('relatorios/<uuid:pk>/arquivo/', views.arquivo_relatorio, name='relatorio_arquivo'),
     path('relatorios/<uuid:pk>/submeter/', views.submeter_relatorio, name='relatorio_submeter'),
     path('relatorios/<uuid:pk>/avaliar/', views.avaliar_relatorio, name='relatorio_avaliar'),
 ]

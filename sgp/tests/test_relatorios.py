@@ -12,6 +12,7 @@ from apps.projetos.models import Pessoa, Projeto
 from apps.bolsas.models import Bolsa, ModalidadeBolsa
 from apps.equipes.models import MembroEquipe
 from apps.relatorios.models import Relatorio
+from sgp.tests.arquivos_teste import MediaTemporariaMixin, anexar_pdf
 
 
 def _criar_usuario(username, perfil, pessoa=None):
@@ -25,7 +26,7 @@ def _dados_relatorio(bolsa, **extras):
         'bolsa': bolsa.pk,
         'tipo': 'parcial',
         'titulo': 'Relatório parcial de pesquisa',
-        'conteudo': 'Conteúdo do relatório',
+        'resumo': 'Resumo do relatório para a busca do sistema.',
         'periodo_inicio': '2026-03-01',
         'periodo_fim': '2026-11-30',
     }
@@ -33,10 +34,11 @@ def _dados_relatorio(bolsa, **extras):
     return dados
 
 
-class RelatorioAcessoTests(TestCase):
+class RelatorioAcessoTests(MediaTemporariaMixin, TestCase):
     """Testes de acesso às views de relatórios."""
 
     def setUp(self):
+        super().setUp()
         inst, _ = Instituicao.objects.get_or_create(sigla='IMC', defaults={'nome': 'IMC'})
         self.modalidade, _ = ModalidadeBolsa.objects.get_or_create(
             sigla='PIBIC', defaults={'nome': 'Iniciação Científica'},
@@ -89,6 +91,9 @@ class RelatorioAcessoTests(TestCase):
             nota=Decimal('4.00'), observacoes='Refaça as análises.',
             avaliado_por=self.docente,
         )
+        # Submissão (e re-submissão) exige o documento em PDF anexado
+        anexar_pdf(self.rel_rascunho, nome='rascunho.pdf')
+        anexar_pdf(self.rel_reprovado, nome='reprovado.pdf')
         # Submetido do aluno2 (oriente do docente alheio)
         self.rel_submetido_alheio = Relatorio.objects.create(
             bolsa=self.bolsa_alheia, aluno=self.aluno2, tipo='final',

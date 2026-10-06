@@ -335,6 +335,19 @@ def _pode_submeter(user, relatorio) -> bool:
     return False
 
 
+def _pode_ver_relatorio(user, relatorio) -> None:
+    """Levanta PermissionDenied se o usuário não pode ver o relatório.
+
+    Aluno só vê os próprios relatórios (LGPD); demais perfis (orientador,
+    técnico+, etc.) veem todos. Usada pelo detalhe, pela avaliação e pela
+    entrega do PDF.
+    """
+    perfil = perfil_de(user)
+    if perfil and perfil.perfil == Perfil.PERFIL_ALUNO:
+        if not perfil.pessoa or relatorio.aluno_id != perfil.pessoa.id:
+            raise PermissionDenied
+
+
 def _pode_avaliar(user, relatorio) -> bool:
     """Avalia: técnico+ (gerir), orientador ou co-orientador ativo do projeto."""
     perfil = perfil_de(user)
@@ -357,7 +370,10 @@ def lista_relatorios(request):
     if tipo:
         relatorios = relatorios.filter(tipo=tipo)
     if busca:
-        relatorios = relatorios.filter(titulo__icontains=busca)
+        # Busca por título ou resumo (resumo é o texto curto da busca)
+        relatorios = relatorios.filter(
+            Q(titulo__icontains=busca) | Q(resumo__icontains=busca)
+        )
 
     perfil = perfil_de(request.user)
     gerir = pode_gerir(perfil)
@@ -421,11 +437,8 @@ def detalhe_relatorio(request, pk):
         pk=pk,
     )
 
-    perfil = perfil_de(request.user)
     # Aluno só vê os próprios relatórios
-    if perfil and perfil.perfil == Perfil.PERFIL_ALUNO:
-        if not perfil.pessoa or relatorio.aluno_id != perfil.pessoa.id:
-            raise PermissionDenied
+    _pode_ver_relatorio(request.user, relatorio)
 
     contexto = {
         'relatorio': relatorio,
@@ -442,6 +455,17 @@ def detalhe_relatorio(request, pk):
 
 @login_required
 @never_cache
+def arquivo_relatorio(request, pk):
+    """Entrega o PDF do relatório com a permissão do detalhe."""
+    relatorio = get_object_or_404(Relatorio, pk=pk)
+    _pode_ver_relatorio(request.user, relatorio)
+    if not relatorio.arquivo_pdf:
+        raise Http404('Este relatório não tem documento anexado.')
+    return servir_pdf(relatorio.arquivo_pdf.path)
+
+
+@login_required
+@never_cache
 def novo_relatorio(request):
     """Criação de relatório (aluno na própria bolsa, etc.)."""
     perfil_de(request.user)  # usuários sem perfil → 403
@@ -454,7 +478,7 @@ def novo_relatorio(request):
         inicial['bolsa'] = bolsa_id
 
     if request.method == 'POST':
-        form = RelatorioForm(request.POST, bolsas=bolsas)
+        form = RelatorioForm(request.POST, request.FILES, bolsas=bolsas)
         if form.is_valid():
             relatorio = form.save()
             messages.success(
@@ -483,7 +507,9 @@ def editar_relatorio(request, pk):
     bolsas = _bolsas_para(request.user)
 
     if request.method == 'POST':
-        form = RelatorioForm(request.POST, instance=relatorio, bolsas=bolsas)
+        form = RelatorioForm(
+            request.POST, request.FILES, instance=relatorio, bolsas=bolsas,
+        )
         if form.is_valid():
             form.save()
             messages.success(request, 'Relatório atualizado com sucesso.')
@@ -508,6 +534,15 @@ def submeter_relatorio(request, pk):
     relatorio = get_object_or_404(Relatorio, pk=pk)
     if not _pode_submeter(request.user, relatorio):
         raise PermissionDenied
+    # Documento em PDF obrigatório para a submissão: é ele que o
+    # avaliador leu; o resumo fica no sistema para a busca.
+    if not relatorio.arquivo_pdf:
+        messages.error(
+            request,
+            'Anexe o PDF do relatório (campo "Documento (PDF)") antes de '
+            'submeter para avaliação.',
+        )
+        return redirect('relatorio_detalhe', pk=relatorio.pk)
 
     relatorio.status = 'submetido'
     relatorio.data_submissao = timezone.now()

@@ -54,7 +54,12 @@ class PlanoTrabalho(TimeStampedModel, ModeloComArquivo):
     def __str__(self):
         return f'{self.titulo} - {self.aluno.nome}'
 
-class Relatorio(TimeStampedModel):
+class Relatorio(TimeStampedModel, ModeloComArquivo):
+    """Relatório do aluno (parcial/final): metadados + resumo + PDF.
+
+    A redação completa fica no PDF anexado; no sistema ficam apenas os
+    metadados, o período e o `resumo` (texto que alimenta a busca).
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     bolsa = models.ForeignKey(Bolsa, on_delete=models.CASCADE, related_name='relatorios')
     aluno = models.ForeignKey(Pessoa, on_delete=models.CASCADE, related_name='relatorios')
@@ -63,7 +68,26 @@ class Relatorio(TimeStampedModel):
         ('final', 'Final'),
     ])
     titulo = models.CharField(max_length=255)
-    conteudo = models.TextField(blank=True)
+    resumo = models.TextField(
+        max_length=1000,
+        blank=True,
+        verbose_name='Resumo',
+        help_text=(
+            'Texto curto (até 1000 caracteres) exibido na tela e usado '
+            'na busca do sistema.'
+        ),
+    )
+    arquivo_pdf = models.FileField(
+        upload_to='uploads/relatorios/%Y/%m/',
+        blank=True,
+        validators=[validar_pdf],
+        verbose_name='Documento (PDF)',
+        help_text=(
+            'Relatório completo em PDF (até 15 MB). Obrigatório para '
+            'submeter para avaliação.'
+        ),
+    )
+    campo_arquivo = 'arquivo_pdf'
     periodo_inicio = models.DateField(null=True, blank=True)
     periodo_fim = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=15, choices=[

@@ -78,7 +78,7 @@ class ComprovanteBase(TestCase):
         # Relatório avaliado pelo docente
         self.relatorio = Relatorio.objects.create(
             aluno=self.aluno1, bolsa=self.bolsa, tipo='final',
-            titulo='Relatório final de pesquisa', conteudo='Conteúdo',
+            titulo='Relatório final de pesquisa', resumo='Conteúdo',
             periodo_inicio=date(2026, 3, 1), periodo_fim=date(2026, 8, 31),
             status='avaliado', nota=Decimal('7.50'),
             avaliado_por=self.docente, data_avaliacao=timezone.now(),

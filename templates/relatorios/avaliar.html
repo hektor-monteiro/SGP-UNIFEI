@@ -24,6 +24,16 @@
         Nota mínima para aprovação automática: <strong>{{ nota_minima }}</strong>
         (igual ou acima → Aprovado; abaixo → Reprovado).
     </p>
+    <div style="margin-top:12px; background:#f5f7fa; padding:12px; border-radius:4px;">
+        <strong>Documento do relatório:</strong>
+        {% if relatorio.arquivo_pdf %}
+            <a href="{% url 'relatorio_arquivo' relatorio.pk %}" style="color:#003366;">Abrir o PDF</a>
+            <span style="color:#666; font-size:0.85rem;">(o relatório completo está no anexo)</span>
+        {% else %}<span style="color:#666;">Nenhum PDF anexado.</span>{% endif %}
+        {% if relatorio.resumo %}
+            <p style="margin:8px 0 0; white-space:pre-wrap;">{{ relatorio.resumo|linebreaksbr }}</p>
+        {% endif %}
+    </div>
 </div>
 
 <div class="card">
