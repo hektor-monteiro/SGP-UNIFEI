@@ -293,6 +293,48 @@ class PreenchimentoProjetoTests(BaseAvaliacaoProjetoTests):
         self.assertContains(response, self.projeto.codigo)
 
 
+class PainelAlocacaoProjetoTests(BaseAvaliacaoProjetoTests):
+    """Seção "Aguardando alocação" do painel do técnico (§3.4)."""
+
+    def test_tecnico_lista_projeto_submetido_com_acao_alocar_avaliador(self):
+        self._submeter()
+        self.client.login(username='tec_avp', password='x')
+        response = self.client.get(reverse('dashboard'))
+        self.assertContains(response, 'Aguardando alocação de avaliador')
+        # Coluna "Objeto a avaliar": Projeto - <código do projeto>
+        self.assertContains(response, f'Projeto - {self.projeto.codigo}')
+        self.assertContains(response, 'Alocar Avaliador')
+        self.assertContains(
+            response,
+            reverse('projeto_alocar', kwargs={'pk': self.projeto.pk}),
+        )
+
+    def test_projeto_com_avaliador_alocado_nao_lista(self):
+        """Com alocação o projeto sai da fila (já tem avaliador)."""
+        self._submeter()
+        self.client.login(username='tec_avp', password='x')
+        self.client.post(
+            self.url_alocar, {'avaliador': str(self.docente_fora.pk)},
+        )
+        response = self.client.get(reverse('dashboard'))
+        self.assertNotContains(response, 'Aguardando alocação de avaliador')
+        self.assertNotContains(response, 'Alocar Avaliador')
+
+    def test_projeto_nao_submetido_nao_lista(self):
+        """Antes do envio não há o que alocar."""
+        self.client.login(username='tec_avp', password='x')
+        response = self.client.get(reverse('dashboard'))
+        self.assertNotContains(response, 'Aguardando alocação de avaliador')
+
+    def test_docente_nao_ve_a_secao_de_alocacao(self):
+        """A ação de alocação é exclusiva de técnico+ (e superusuário)."""
+        self._submeter()
+        self.client.login(username='doc_avp', password='x')
+        response = self.client.get(reverse('dashboard'))
+        self.assertNotContains(response, 'Aguardando alocação de avaliador')
+        self.assertNotContains(response, 'Alocar Avaliador')
+
+
 class RemocaoProjetoTests(BaseAvaliacaoProjetoTests):
     """Remoção de alocação recalcula status e nota do projeto."""
 

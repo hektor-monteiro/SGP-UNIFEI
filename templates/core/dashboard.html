@@ -33,6 +33,28 @@
 </div>
 {% endif %}
 
+{% if alocacoes_pendentes %}
+<div class="card">
+    <h2>Aguardando alocação de avaliador ({{ alocacoes_pendentes|length }})</h2>
+    <table>
+        <tr><th>Objeto a avaliar</th><th>Título</th><th>Ação</th></tr>
+        {% for item in alocacoes_pendentes %}
+        <tr>
+            {% if item.tipo == 'proposta' %}
+            <td><a href="{% url 'proposta_alocar' item.pk %}" style="color:#003366; font-weight:bold;">Proposta - {{ item.codigo }}</a></td>
+            <td>{{ item.titulo|truncatechars:70 }}</td>
+            <td><a href="{% url 'proposta_alocar' item.pk %}" style="color:#003366;">Alocar Avaliador</a></td>
+            {% else %}
+            <td><a href="{% url 'projeto_alocar' item.pk %}" style="color:#003366; font-weight:bold;">Projeto - {{ item.codigo }}</a></td>
+            <td>{{ item.titulo|truncatechars:70 }}</td>
+            <td><a href="{% url 'projeto_alocar' item.pk %}" style="color:#003366;">Alocar Avaliador</a></td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endif %}
+
 {% if relatorios_avaliar %}
 <div class="card">
     <h2>Relatórios a avaliar ({{ relatorios_avaliar|length }})</h2>

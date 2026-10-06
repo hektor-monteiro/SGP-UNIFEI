@@ -348,3 +348,58 @@ class AvaliacaoConclusaoTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.edital.refresh_from_db()
         self.assertEqual(self.edital.nota_minima, Decimal('8.00'))
+
+
+class PainelAlocacaoPropostaTests(TestCase):
+    """Seção "Aguardando alocação" do painel do técnico (propostas)."""
+
+    def setUp(self):
+        self.edital = _criar_edital()
+        self.tecnico = _criar_usuario('tec_painel', Perfil.PERFIL_TECNICO)
+        self.docente = _criar_usuario('doc_painel', Perfil.PERFIL_DOCENTE)
+        self.aluno = _criar_usuario('alu_painel', Perfil.PERFIL_ALUNO)
+        self.url = reverse('dashboard')
+
+    def test_tecnico_lista_proposta_submetida_com_acao_alocar_avaliador(self):
+        proposta = _criar_proposta(
+            self.edital, self.aluno.perfil.pessoa,
+            titulo='Proposta sem avaliador',
+        )
+        self.client.login(username='tec_painel', password='x')
+        response = self.client.get(self.url)
+        self.assertContains(response, 'Aguardando alocação de avaliador')
+        # Coluna "Objeto a avaliar": Proposta - <código do edital>
+        self.assertContains(response, f'Proposta - {self.edital.codigo}')
+        self.assertContains(response, 'Proposta sem avaliador')
+        self.assertContains(response, 'Alocar Avaliador')
+        self.assertContains(
+            response,
+            reverse('proposta_alocar', kwargs={'pk': proposta.pk}),
+        )
+
+    def test_proposta_com_avaliador_alocado_nao_lista(self):
+        proposta = _criar_proposta(
+            self.edital, self.aluno.perfil.pessoa,
+            titulo='Proposta já alocada',
+        )
+        Avaliacao.objects.create(
+            tipo='proposta',
+            proposta=proposta,
+            avaliador=self.docente,
+            alocado_por=self.tecnico,
+            status='alocada',
+        )
+        proposta.status = 'em_avaliacao'
+        proposta.save()
+        self.client.login(username='tec_painel', password='x')
+        response = self.client.get(self.url)
+        self.assertNotContains(response, 'Aguardando alocação de avaliador')
+        self.assertNotContains(response, 'Alocar Avaliador')
+
+    def test_docente_nao_ve_a_secao_de_alocacao(self):
+        """A ação de alocação é exclusiva de técnico+ (e superusuário)."""
+        _criar_proposta(self.edital, self.aluno.perfil.pessoa)
+        self.client.login(username='doc_painel', password='x')
+        response = self.client.get(self.url)
+        self.assertNotContains(response, 'Aguardando alocação de avaliador')
+        self.assertNotContains(response, 'Alocar Avaliador')

@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 
-from apps.projetos.models import Projeto, Pessoa
+from apps.projetos.models import Projeto, Pessoa, Proposta
 from apps.bolsas.models import Bolsa
 from apps.comprovantes.models import Comprovante
 from apps.editais.models import Edital, Avaliacao
@@ -26,6 +26,42 @@ def index(request):
     if request.user.is_authenticated:
         return render(request, 'core/index.html')
     return render(request, 'core/index.html')
+
+
+def _alocacoes_pendentes() -> list:
+    """Propostas submetidas e projetos submetidos ainda sem avaliador.
+
+    Alimenta o painel do técnico+ com a ação "Alocar Avaliador"
+    (§3.12): a alocação vem antes da avaliação.
+    """
+    itens = []
+    propostas = (
+        Proposta.objects.filter(status='submetida', avaliacoes__isnull=True)
+        .select_related('edital')
+        .order_by('data_submissao')
+    )
+    for proposta in propostas:
+        itens.append({
+            'pk': proposta.pk,
+            'tipo': 'proposta',
+            'codigo': (
+                proposta.edital.codigo if proposta.edital_id else 'sem edital'
+            ),
+            'titulo': proposta.titulo,
+        })
+    projetos = (
+        Projeto.objects.filter(
+            status_avaliacao='submetido', avaliacoes__isnull=True,
+        ).order_by('data_registro')
+    )
+    for projeto in projetos:
+        itens.append({
+            'pk': projeto.pk,
+            'tipo': 'projeto',
+            'codigo': projeto.codigo,
+            'titulo': projeto.titulo,
+        })
+    return itens
 
 
 @login_required
@@ -76,6 +112,9 @@ def dashboard(request):
             'total_editais': Edital.objects.count(),
             'total_pessoas': Pessoa.objects.count(),
             'mostrar_tudo': True,
+            # Pendentes de alocação: para o técnico+ a ação a listar
+            # é "Alocar Avaliador" (não "avaliar")
+            'alocacoes_pendentes': _alocacoes_pendentes(),
         })
     elif perfil and perfil.perfil == 'docente':
         # Docente vê apenas seus projetos (vínculo via Perfil.pessoa;
