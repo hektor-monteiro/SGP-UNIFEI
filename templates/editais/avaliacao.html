@@ -9,7 +9,7 @@
             <h2 style="margin-bottom:5px;">Avaliação de proposta</h2>
             <p style="margin:0;">
                 <strong>{{ proposta.titulo }}</strong>
-                {% if proposta.edital %} — edital <a href="{% url 'edital_detalhe' proposta.edital.pk %}" style="color:#003366;">{{ proposta.edital.codigo }}</a>{% endif %}
+                {% if proposta.edital %} — edital {% if pode_gerir or proposta.edital.status == 'em_andamento' %}<a href="{% url 'edital_detalhe' proposta.edital.pk %}" style="color:#003366;">{{ proposta.edital.codigo }}</a>{% else %}{{ proposta.edital.codigo }}{% endif %}{% endif %}
             </p>
             <p style="color:#666; margin:5px 0 0;">Avaliador: {{ avaliacao.avaliador.get_full_name|default:avaliacao.avaliador.username }}</p>
         </div>

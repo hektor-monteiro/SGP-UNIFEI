@@ -214,6 +214,19 @@ class AvaliacaoConclusaoTests(TestCase):
             'parecer': parecer,
         })
 
+    def test_edital_oculto_aparece_sem_link_para_avaliador(self):
+        """Docente avaliador (abaixo de técnicos) vê o edital só como texto."""
+        self.edital.status = 'encerrado'
+        self.edital.save()
+        self.client.login(username='doc_aval', password='x')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.edital.codigo)
+        self.assertNotContains(
+            response,
+            reverse('edital_detalhe', kwargs={'pk': self.edital.pk}),
+        )
+
     def test_painel_docente_mostra_proposta_pendente_com_link(self):
         self.client.login(username='doc_aval', password='x')
         response = self.client.get(reverse('dashboard'))

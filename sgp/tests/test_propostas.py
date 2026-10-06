@@ -155,11 +155,12 @@ class SubmissaoPropostaTests(TestCase):
         response = self.client.get(reverse('edital_detalhe', kwargs={'pk': self.edital.pk}))
         self.assertNotContains(response, '+ Submeter proposta')
 
-    def test_botao_oculto_em_edital_fechado(self):
+    def test_edital_fechado_e_invisivel_para_aluno(self):
+        """Abaixo de técnicos, edital fora de 'em andamento' não abre (§3.1)."""
         fechado = _criar_edital(codigo='FECHADO-01', status='encerrado')
         self.client.login(username='alu_prop', password='x')
         response = self.client.get(reverse('edital_detalhe', kwargs={'pk': fechado.pk}))
-        self.assertNotContains(response, '+ Submeter proposta')
+        self.assertEqual(response.status_code, 403)
 
 
 class GestaoPropostaTests(TestCase):
@@ -201,6 +202,34 @@ class GestaoPropostaTests(TestCase):
             reverse('proposta_detalhe', kwargs={'pk': self.proposta.pk})
         )
         self.assertEqual(response.status_code, 302)
+
+    def test_edital_oculto_aparece_como_texto_na_proposta(self):
+        """Submetente vê o edital como texto (sem link) quando oculto (§3.1)."""
+        self.edital.status = 'encerrado'
+        self.edital.save()
+        self.client.login(username='alu_dono', password='x')
+        response = self.client.get(
+            reverse('proposta_detalhe', kwargs={'pk': self.proposta.pk}),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.edital.codigo)
+        self.assertNotContains(
+            response,
+            reverse('edital_detalhe', kwargs={'pk': self.edital.pk}),
+        )
+        self.assertNotContains(response, '← Voltar ao edital')
+
+    def test_edital_visivel_continua_linkado_na_proposta(self):
+        """Com o edital em andamento, o link segue normal (submetente)."""
+        self.client.login(username='alu_dono', password='x')
+        response = self.client.get(
+            reverse('proposta_detalhe', kwargs={'pk': self.proposta.pk}),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            reverse('edital_detalhe', kwargs={'pk': self.edital.pk}),
+        )
 
     def test_dono_edita_proposta_submetida(self):
         self.client.login(username='alu_dono', password='x')

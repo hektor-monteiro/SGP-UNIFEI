@@ -36,7 +36,7 @@ class EditalAcessoTests(TestCase):
         self.modalidade, _ = ModalidadeBolsa.objects.get_or_create(
             sigla='PIBIC', defaults={'nome': 'Iniciação Científica'},
         )
-        self.edital = _criar_edital(modalidade=self.modalidade)
+        self.edital = _criar_edital('em_andamento', modalidade=self.modalidade)
         _criar_usuario('alu_edital', Perfil.PERFIL_ALUNO)
         _criar_usuario('doc_edital', Perfil.PERFIL_DOCENTE)
         _criar_usuario('tec_edital', Perfil.PERFIL_TECNICO)
@@ -108,6 +108,64 @@ class EditalAcessoTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'posterior')
         self.assertFalse(Edital.objects.filter(codigo='DTAS-ERR').exists())
+
+
+class VisibilidadeEditalTests(TestCase):
+    """Editais fora de 'em andamento' não aparecem abaixo de técnicos (§3.1)."""
+
+    def setUp(self):
+        _criar_usuario('alu_vis', Perfil.PERFIL_ALUNO)
+        _criar_usuario('doc_vis', Perfil.PERFIL_DOCENTE)
+        _criar_usuario('tec_vis', Perfil.PERFIL_TECNICO)
+        self.aberto = _criar_edital('em_andamento', codigo='VIS-ABERTO')
+        self.ocultos = [
+            _criar_edital('rascunho', codigo='VIS-RASCUNHO'),
+            _criar_edital('aprovado', codigo='VIS-APROVADO'),
+            _criar_edital('encerrado', codigo='VIS-ENCERRADO'),
+        ]
+
+    def test_lista_mostra_somente_em_andamento_para_aluno_e_docente(self):
+        for username in ('alu_vis', 'doc_vis'):
+            self.client.login(username=username, password='x')
+            response = self.client.get(reverse('editais_lista'))
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'VIS-ABERTO')
+            for edital in self.ocultos:
+                self.assertNotContains(response, edital.codigo)
+            # Filtro de status também limitado à única opção visível
+            self.assertContains(response, '>Em Andamento<')
+            self.assertNotContains(response, '>Encerrado<')
+            self.client.logout()
+
+    def test_lista_mostra_todos_para_tecnico(self):
+        self.client.login(username='tec_vis', password='x')
+        response = self.client.get(reverse('editais_lista'))
+        self.assertEqual(response.status_code, 200)
+        for edital in [self.aberto, *self.ocultos]:
+            self.assertContains(response, edital.codigo)
+        self.assertContains(response, '>Encerrado<')
+
+    def test_detalhe_oculto_para_aluno_e_docente(self):
+        for username in ('alu_vis', 'doc_vis'):
+            self.client.login(username=username, password='x')
+            for edital in self.ocultos:
+                response = self.client.get(
+                    reverse('edital_detalhe', kwargs={'pk': edital.pk}),
+                )
+                self.assertEqual(response.status_code, 403, edital.codigo)
+            response = self.client.get(
+                reverse('edital_detalhe', kwargs={'pk': self.aberto.pk}),
+            )
+            self.assertEqual(response.status_code, 200)
+            self.client.logout()
+
+    def test_detalhe_visivel_para_tecnico_em_qualquer_status(self):
+        self.client.login(username='tec_vis', password='x')
+        for edital in self.ocultos:
+            response = self.client.get(
+                reverse('edital_detalhe', kwargs={'pk': edital.pk}),
+            )
+            self.assertEqual(response.status_code, 200, edital.codigo)
 
 
 class FluxoEditalTests(TestCase):

@@ -24,7 +24,11 @@
         {% if proposta.edital %}
         <tr>
             <th style="width:220px;">Edital</th>
+            {% if pode_gerir or proposta.edital.status == 'em_andamento' %}
             <td><a href="{% url 'edital_detalhe' proposta.edital.pk %}" style="color:#003366;">{{ proposta.edital.codigo }} — {{ proposta.edital.titulo }}</a></td>
+            {% else %}
+            <td>{{ proposta.edital.codigo }} — {{ proposta.edital.titulo }}</td>
+            {% endif %}
         </tr>
         {% endif %}
         <tr><th>Submetido por</th><td>{{ proposta.submetido_por.nome }}</td></tr>
@@ -84,7 +88,9 @@
 </div>
 
 <p>
-    {% if proposta.edital %}
+    {% if proposta.edital and pode_gerir %}
+        <a href="{% url 'edital_detalhe' proposta.edital.pk %}" style="color:#003366;">← Voltar ao edital</a>
+    {% elif proposta.edital and proposta.edital.status == 'em_andamento' %}
         <a href="{% url 'edital_detalhe' proposta.edital.pk %}" style="color:#003366;">← Voltar ao edital</a>
     {% else %}
         <a href="{% url 'editais_lista' %}" style="color:#003366;">← Voltar aos editais</a>

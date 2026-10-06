@@ -103,7 +103,7 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 
 | Rota | Ação | Quem pode | Regra especial |
 |---|---|---|---|
-| `/editais/` e `/editais/<pk>/` | visualizar | autenticado | propostas: téc+ todas; demais só as próprias |
+| `/editais/` e `/editais/<pk>/` | visualizar | autenticado | abaixo de técnicos: **só status em andamento** (lista filtrada + detalhe 403); propostas: téc+ todas; demais só as próprias |
 | `/editais/novo/`, `/editar/` | criar/editar | **téc+** | cria como `rascunho`; status só via ações |
 | `/editais/<pk>/acao/<acao>/` (POST) | fluxo | `aprovar` → **diretor+**; `iniciar/encerrar/cancelar` → téc+ | origem/destino do status validados |
 | `/editais/<pk>/propostas/nova/` | criar | **somente aluno ou docente** | téc+ e superusuário → 403 (não são submetentes); exige edital em andamento e no período e Pessoa vinculada |

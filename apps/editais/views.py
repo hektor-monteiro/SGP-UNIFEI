@@ -5,7 +5,8 @@ Fluxo de vida (requisito §3.1):
                  (qualquer status operacional pode ir para cancelado)
 
 Permissões:
-- Lista/Detalhe: todos os autenticados (editais são informativos).
+- Lista/Detalhe: todos os autenticados, mas abaixo de técnicos (aluno e
+  docente) só aparecem/acesam editais com status 'em_andamento'.
 - Criação/Edição: técnico, diretor, pro-reitor (o técnico cria).
 - Aprovar/validar: SOMENTE diretor ou pro-reitor (requisito: "Técnico cria,
   Diretor/Pro-reitor valida") — carimba validado_por/data_validacao.
@@ -151,7 +152,11 @@ def _recalcular_proposta(proposta) -> None:
 @login_required
 @never_cache
 def lista(request):
-    """Lista de editais com filtros por status e modalidade."""
+    """Lista de editais com filtros por status e modalidade.
+
+    Abaixo de técnicos, só aparecem editais em execução ('em_andamento')
+    e o filtro de status se resume a essa opção (requisito §3.1).
+    """
     editais = Edital.objects.select_related('modalidade', 'criado_por', 'validado_por')
 
     status = request.GET.get('status', '')
@@ -166,12 +171,17 @@ def lista(request):
         editais = editais.filter(titulo__icontains=busca)
 
     perfil = perfil_de(request.user)
+    gerir = pode_gerir(perfil)
+    todas = Edital._meta.get_field('status').choices
+    if not gerir:
+        editais = editais.filter(status='em_andamento')
+        todas = tuple(c for c in todas if c[0] == 'em_andamento')
     contexto = {
         'editais': editais,
         'filtros': {'status': status, 'modalidade': modalidade, 'q': busca},
-        'status_choices': Edital._meta.get_field('status').choices,
+        'status_choices': todas,
         'modalidades': ModalidadeBolsa.objects.filter(ativo=True),
-        'pode_gerir': pode_gerir(perfil),
+        'pode_gerir': gerir,
     }
     return render(request, 'editais/lista.html', contexto)
 
@@ -179,7 +189,11 @@ def lista(request):
 @login_required
 @never_cache
 def detalhe(request, pk):
-    """Detalhe do edital com as ações do fluxo e as propostas submetidas."""
+    """Detalhe do edital com as ações do fluxo e as propostas submetidas.
+
+    Abaixo de técnicos, só o edital 'em andamento' é acessível; os demais
+    status são restritos à gestão (requisito §3.1).
+    """
     edital = get_object_or_404(
         Edital.objects.select_related('modalidade', 'criado_por', 'validado_por'),
         pk=pk,
@@ -187,6 +201,8 @@ def detalhe(request, pk):
 
     perfil = perfil_de(request.user)
     gerir = pode_gerir(perfil)
+    if not gerir and edital.status != 'em_andamento':
+        raise PermissionDenied
 
     acoes_disponiveis = [
         (acao, cfg['rotulo'])
@@ -330,7 +346,9 @@ def proposta_nova(request, pk):
             request,
             f'O edital {edital.codigo} não está aberto para submissões.',
         )
-        return redirect('edital_detalhe', pk=edital.pk)
+        # Redireciona para a lista: o detalhe pode ser oculto para o
+        # submetente (abaixo de técnicos, editais fora de execução).
+        return redirect('editais_lista')
 
     pessoa = perfil.pessoa
     if pessoa is None:

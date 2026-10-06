@@ -52,6 +52,7 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Pode ser criado sobre demanda (não apenas por calendário)
 - Técnico cria, Diretor/Pro-reitor **aprova** (valida)
 - **Recebe propostas apenas quando "Em Andamento"** e no período informado — após a aprovação, um técnico+ (ou perfil superior) inicia a execução
+- **Visibilidade**: editais fora de "Em Andamento" não aparecem para perfis abaixo de técnico (aluno e docente veem apenas os em execução; na proposta, a referência ao edital oculto aparece como texto, sem link)
 
 ### 3.2 Modalidade de Bolsa
 - Configurável pelo técnico (não hardcoded)
