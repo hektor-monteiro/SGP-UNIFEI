@@ -83,6 +83,13 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Upload de documentos (PDF de projetos, planos de trabalho e relatórios).
+# Os arquivos ficam fora do código (volume em produção) e NUNCA são servidos
+# publicamente por /media/: cada tela usa uma view autenticada que aplica a
+# mesma permissão do detalhe (os PDFs podem conter dados pessoais — LGPD).
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'index'

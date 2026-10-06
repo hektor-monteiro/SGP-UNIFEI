@@ -30,6 +30,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Uploads (PDF de projetos, planos e relatórios): persistem fora do
+    # container — sem isto os arquivos se perdem a cada rebuild da imagem.
+    volumes:
+      - media_data:/app/media
     restart: unless-stopped
 
   db:
@@ -51,3 +55,4 @@ services:
 
 volumes:
   postgres_data:
+  media_data:

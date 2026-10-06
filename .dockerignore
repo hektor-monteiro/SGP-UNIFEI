@@ -3,6 +3,7 @@
 __pycache__
 *.pyc
 db.sqlite3
+media
 docs
 setup.sh
 AGENTS.md
