@@ -279,6 +279,11 @@ class Command(BaseCommand):
                 codigo=codigo,
                 defaults={
                     'titulo': titulo,
+                    'resumo': (
+                        f'Projeto de pesquisa: {titulo}. Objetivos, '
+                        'metodologia e cronograma detalhados no documento '
+                        'em PDF anexado.'
+                    ),
                     'data_registro': data_inicio - timedelta(days=random.randint(5, 60)),
                     'data_inicio': data_inicio,
                     'data_termino': data_termino,
