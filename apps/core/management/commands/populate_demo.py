@@ -312,6 +312,11 @@ class Command(BaseCommand):
                     else random.choice(disponiveis)
                 )
                 alunos_usados.add(aluno.id)
+                # Idempotência: alunos que já têm bolsa de execução anterior
+                # são pulados (o get_or_create por aluno não é único e
+                # `MultipleObjectsReturned` quebrava a reexecução da seed)
+                if Bolsa.objects.filter(aluno=aluno).exists():
+                    continue
                 bolsa, created = Bolsa.objects.get_or_create(
                     aluno=aluno,
                     defaults={
