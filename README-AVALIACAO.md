@@ -88,7 +88,9 @@ Marque o que foi testado e anote o que falhar:
 - [ ] **Propostas**: aluno/docente submetem a edital aberto; técnico vê todas,
       cada um vê só as suas; edição só enquanto *submetida*
 - [ ] **Critérios de avaliação**: técnico cria/edita com pesos; aluno só lê
-- [ ] **Alocação**: técnico aloca docentes (múltiplos) e remove/realoca
+- [ ] **Alocação**: técnico aloca docentes (múltiplos) e remove/realoca;
+      painel do `tecnico1` lista propostas/projetos sem avaliador com a
+      ação **Alocar Avaliador** (só téc+ vê a seção)
 - [ ] **Avaliação**: painel do `docente1` mostra "Propostas a avaliar" com link;
       notas 0–10 por critério + parecer; nota final = média ponderada;
       aprovação automática pela nota mínima do edital

@@ -52,7 +52,7 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 
 | Rota | Ação | Quem pode | Regra especial |
 |---|---|---|---|
-| `/painel/` | visualizar | autenticado | conteúdo por perfil; fila de relatórios: técnico+ vê todos, docente orientandos e co-orientandos |
+| `/painel/` | visualizar | autenticado | conteúdo por perfil; fila de relatórios: técnico+ vê todos, docente orientandos e co-orientandos; **seção "Aguardando alocação de avaliador"** (só téc+): propostas submetidas e projetos submetidos sem avaliador, com a ação **Alocar Avaliador** |
 | `/lgpd/` | visualizar | autenticado | consentimento e direitos do titular |
 | `/lgpd/consentimento/` (POST) | editar | autenticado com Perfil | superusuário não é titular → redirect |
 | `/lgpd/consentimento/revogar/` (POST) | editar | autenticado com Perfil | idem |

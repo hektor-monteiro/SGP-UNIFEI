@@ -137,6 +137,12 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
   `escopo`: `proposta`, `projeto` ou `ambos`) — a nota é a **média
   ponderada** pelos pesos; alocação de avaliadores e remoção são de
   técnico+; quem é alocado preenche notas 0–10 + parecer
+- **Fila de alocação no painel**: o painel do técnico+ tem a seção
+  **"Aguardando alocação de avaliador"**, que lista **propostas submetidas**
+  e **projetos submetidos** ainda sem avaliador com a ação
+  **Alocar Avaliador** (leva ao formulário de alocação); alocado o avaliador,
+  o item sai da fila e quem foi alocado passa a vê-lo em "Avaliações a
+  realizar" com a ação "Realizar avaliação"
 
 ### 3.13 Usuário
 - Perfil de acesso
