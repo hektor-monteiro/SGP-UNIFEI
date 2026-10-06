@@ -92,6 +92,11 @@ Marque o que foi testado e anote o que falhar:
 - [ ] **Avaliação**: painel do `docente1` mostra "Propostas a avaliar" com link;
       notas 0–10 por critério + parecer; nota final = média ponderada;
       aprovação automática pela nota mínima do edital
+- [ ] **Avaliação por pares de projetos**: `docente1` envia o projeto pelo
+      detalhe; `tecnico1` aloca avaliadores (a equipe é excluída) e a nota
+      final vira indicador na fila de cotas; projeto com **financiamento
+      externo** já nasce com **nota 10,00 automática** (envio e alocação
+      dispensados)
 - [ ] **Comprovantes**: emissão (bolsa/participação/avaliação) com elegibilidade;
       lista conforme visibilidade; verificação pública por código em
       `/comprovantes/verificar/`; página de detalhe imprimível (Ctrl+P)

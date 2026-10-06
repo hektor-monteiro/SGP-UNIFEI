@@ -80,6 +80,13 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
   notas 0–10 pelos **critérios de escopo `projeto`** (catálogo gerido pelo
   técnico+, §3.12) + parecer; a **nota final** é a média das avaliações
   concluídas (projeto passa a `avaliada` quando todas concluírem)
+- **Nota automática por financiamento externo**: projeto com **recursos
+  externos > 0** recebe **nota 10,00 automaticamente** ao ser salvo (status
+  `avaliada`, flag `nota_automatica`) — a avaliação por pares é dispensada
+  (não há envio nem alocação de avaliadores). Ao remover (ou zerar) os
+  recursos externos o projeto **volta para o fluxo de avaliação**: com
+  alocações existentes a nota é recalculada com elas; sem alocações volta
+  para `nao_submetido` e o coordenador pode enviar novamente
 
 ### 3.5 Bolsa
 - Vinculada a um projeto
@@ -87,7 +94,7 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Vinculada a uma modalidade
 - Vinculada a um fomentador
 - **Fluxo de cotas**: o docente submete a proposta no edital em andamento apontando **projeto + nº de cotas**; após a aprovação na avaliação, ele **indica os alunos** (limite = cotas aprovadas; aluno já com bolsa ativa é bloqueado); o **técnico implementa a bolsa** a partir da indicação, com formulário pré-preenchido (projeto, aluno, modalidade do edital)
-- **Nota do projeto como indicador de alocação**: a nota da avaliação por pares (§3.4) e a nota da proposta aparecem nas telas de decisão — detalhe da proposta (seção de cotas), indicação do docente, fila do técnico e implementação; a **fila de indicações ordena por prioridade**: pendentes primeiro, depois **maior nota de projeto** (nulas por último)
+- **Nota do projeto como indicador de alocação**: a nota da avaliação por pares — ou a **nota 10,00 automática por financiamento externo** (§3.4) — e a nota da proposta aparecem nas telas de decisão — detalhe da proposta (seção de cotas), indicação do docente, fila do técnico e implementação; a **fila de indicações ordena por prioridade**: pendentes primeiro, depois **maior nota de projeto** (nulas por último)
 - **Criação manual de bolsa**: somente técnico+ (casos avulsos, fora de edital) — o docente não cria bolsa, ele indica o aluno
 
 ### 3.6 Aluno

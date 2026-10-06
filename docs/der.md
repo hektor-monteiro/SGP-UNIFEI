@@ -117,7 +117,8 @@
 | data_termino | DATE | Não | Data de término (pode ser prorrogado) |
 | status | ENUM | Sim | `vigente`, `expirado`, `cancelado`, `arquivado`, `concluido` |
 | status_avaliacao | ENUM | Sim (default `nao_submetido`) | Ciclo da avaliação por pares: `nao_submetido`, `submetido`, `em_avaliacao`, `avaliada` |
-| nota | DECIMAL(4,2) | Não | Nota da avaliação por pares (média das avaliações concluídas) — indicador de alocação de bolsas |
+| nota | DECIMAL(4,2) | Não | Nota da avaliação por pares (média das avaliações concluídas) ou **10,00 automática** com financiamento externo — indicador de alocação de bolsas |
+| nota_automatica | BOOLEAN | Sim (default `false`) | `true` quando a nota veio da regra de financiamento externo (recursos externos > 0 → nota 10,00 automática) |
 | fomentador_id | UUID | FK → Fomentador | Fomentador do projeto (se houver) |
 | recursos_internos | DECIMAL(12,2) | Não | Recursos internos (R$) |
 | recursos_externos | DECIMAL(12,2) | Não | Recursos externos (R$) |
@@ -443,6 +444,7 @@ avaliações (projetos por pares e cotas em editais).
 | 10 | Avaliação por pares: a equipe do projeto (coordenador e membros) não avalia o próprio projeto | Exclusão da equipe em `projeto_alocar` |
 | 11 | Nota do projeto = média das avaliações concluídas; exibida como indicador e ordena a fila de indicações (maior nota primeiro) | `_recalcular_projeto` + template de indicação/implementação + `indicacoes_lista` |
 | 12 | Critérios de avaliação valem conforme o escopo (`proposta`/`projeto`/`ambos`) | Filtro em `avaliacao_detalhe` |
+| 13 | Projeto com financiamento externo (`recursos_externos > 0`) recebe **nota 10,00 automática** e dispensa avaliação por pares; ao remover os recursos volta ao fluxo de avaliação | `Projeto.save()` + `nota_automatica` + bloqueio em `projeto_alocar` |
 
 ### 4.2 Constraints
 
@@ -521,7 +523,7 @@ ON projeto (processo_sipac_id);
 - `nao_submetido` — Ainda não enviado pelo coordenador
 - `submetido` — Enviado, aguardando alocação de avaliadores
 - `em_avaliacao` — Ao menos um avaliador alocado
-- `avaliada` — Todas as alocações concluídas (`nota` preenchida)
+- `avaliada` — Todas as alocações concluídas (`nota` preenchida) ou **nota 10,00 automática** por financiamento externo
 
 ### Escopo do Critério de Avaliação
 - `proposta` — Vale na avaliação de cotas dos editais

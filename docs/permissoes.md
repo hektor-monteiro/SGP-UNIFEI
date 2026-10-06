@@ -71,7 +71,7 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | `/projetos/novo/` | criar | docente ou téc+ | aluno → 403; docente vira coordenador |
 | `/projetos/<pk>/` | visualizar | autenticado | aluno precisa de vínculo (membro ou bolsa) → senão 403 |
 | `/projetos/<pk>/editar/` | editar | téc+ **ou** coordenador do projeto | coordenador não altera o campo coordenador |
-| `/projetos/<pk>/submeter/` (POST) | enviar para avaliação por pares | **coordenador do projeto ou téc+** | só de `nao_submetido`; reenvio bloqueado; aluno/docente-de-fora → 403 |
+| `/projetos/<pk>/submeter/` (POST) | enviar para avaliação por pares | **coordenador do projeto ou téc+** | só de `nao_submetido`; reenvio bloqueado; aluno/docente-de-fora → 403; nota automática (financiamento externo) → envio dispensado |
 
 ### 3.3 Equipes (`apps/equipes/`)
 
@@ -120,7 +120,7 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 | `/propostas/<pk>/editar/` | editar | téc+ ou submetente | só enquanto `submetida` |
 | `/propostas/<pk>/indicar/` | criar indicação | téc+ OU submetente da proposta | só proposta `aprovada` e com cotas disponíveis; bloqueia aluno com bolsa ativa ou já indicado |
 | `/propostas/<pk>/alocar/` | editar | **téc+** | banca múltipla; remoção/realocação |
-| `/projetos/<pk>/alocar/` | alocar avaliadores de projeto | **téc+** | só após envio para avaliação; exclui a equipe do projeto (paridade) da lista; banca múltipla |
+| `/projetos/<pk>/alocar/` | alocar avaliadores de projeto | **téc+** | só após envio para avaliação; exclui a equipe do projeto (paridade) da lista; banca múltipla; **bloqueado** para projeto com nota automática (financiamento externo) |
 | `/avaliacoes/<pk>/` | GET: avaliador ou téc+; POST: **só o avaliador** | | notas 0–10 por critério do **escopo** (`proposta`/`projeto`/`ambos`) + parecer; média ponderada; concluída recalcula a nota da proposta ou do projeto |
 | `/avaliacoes/<pk>/remover/` (POST) | excluir | téc+ | recalcula proposta ou projeto (sem alocações → `submetido`) |
 | `/criterios/` (+novo/editar) | CRUD | **téc+** | escopo (`proposta`/`projeto`/`ambos`) + pesos → nota final; aprovação por `Edital.nota_minima` |
