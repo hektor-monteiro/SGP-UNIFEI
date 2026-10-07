@@ -76,11 +76,12 @@ Marque o que foi testado e anote o que falhar:
       edição pelo coordenador ou técnico+; aluno só enxerga projetos dos
       quais participa ou tem bolsa; busca por `?q=` em **código, título ou
       resumo**
-- [ ] **Documentos em PDF** (projetos, planos e relatórios): campo
-      `Documento (PDF)` no formulário; **envio/submissão bloqueados sem o
-      PDF** com mensagem clara; detalhe exibe o **resumo** e o link
-      **"Abrir o PDF"** (rota autenticada — não é `/media/` público);
-      tentar anexar um arquivo que não seja PDF é recusado no servidor
+- [ ] **Documentos em PDF** (editais, projetos, planos e relatórios): campo
+      `Documento (PDF)` no formulário; **ação/submissão bloqueada sem o PDF**
+      com mensagem clara — no edital é `Aprovar e validar`, nos demais é a
+      submissão; o detalhe mostra a **descrição/resumo** e o link **"Abrir o
+      PDF"** (rota autenticada — não é `/media/` público — abrindo em nova
+      aba); anexar um arquivo que não seja PDF é recusado no servidor
 - [ ] **Equipes** (no detalhe do projeto): técnico+ ou coordenador adiciona,
       edita, encerra e exclui membros; aluno não vê os botões
 - [ ] **Bolsas**: aluno vê apenas a própria; regra de "1 bolsa ativa" ao editar
@@ -92,7 +93,9 @@ Marque o que foi testado e anote o que falhar:
       nota mínima, apenas um relatório final por bolsa; a **tela de
       avaliação mostra o PDF** a ser lido
 - [ ] **Editais**: técnico cria (nascendo *rascunho*), só diretor/publica;
-      ações do fluxo conforme perfil (iniciar/encerrar/cancelar)
+      ações do fluxo conforme perfil (iniciar/encerrar/cancelar);
+      **aprovação bloqueada sem o PDF anexado**; busca por `?q=` em código,
+      título ou descrição
 - [ ] **Propostas**: aluno/docente submetem a edital aberto; técnico vê todas,
       cada um vê só as suas; edição só enquanto *submetida*
 - [ ] **Critérios de avaliação**: técnico cria/edita com pesos; aluno só lê

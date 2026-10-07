@@ -54,6 +54,13 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - **Recebe propostas apenas quando "Em Andamento"** e no período informado — após a aprovação, um técnico+ (ou perfil superior) inicia a execução
 - **Propostas = solicitação de cotas**: submetidas por **docente** (projeto + nº de cotas); o aluno é indicado pelo docente só depois que as cotas são aprovadas (§3.5)
 - **Visibilidade**: editais fora de "Em Andamento" não aparecem para perfis abaixo de técnico (aluno e docente veem apenas os em execução; na proposta, a referência ao edital oculto aparece como texto, sem link)
+- **Documento em PDF**: a redação oficial do edital (objeto, cronograma,
+  requisitos, habilitação) vai em **upload de PDF** anexado pelo técnico;
+  é **obrigatório na aprovação** — a ação `Aprovar e validar` é bloqueada
+  sem o documento, porque o validador lê o texto antes de carimbar
+  (criar e editar permanece livre, §3.17)
+- **Busca**: a lista filtra por `?q=` em **código, título ou descrição**;
+  a redação completa vive no PDF
 
 ### 3.2 Modalidade de Bolsa
 - Configurável pelo técnico (não hardcoded)
@@ -170,36 +177,42 @@ O SGP-UNIFEI é um sistema web para gerenciar os processos de pesquisa da direto
 - Observações sobre entrega de relatório
 - Vinculada ao projeto e ao membro avaliador
 
-### 3.17 Documentos em PDF (Projetos, Planos de Trabalho e Relatórios)
-- **Redação completa em PDF, dados estruturados no sistema**: nos três
-  documentos o usuário preenche os metadados (título, período etc.), um
-  **`resumo`** de até 1000 caracteres **no lugar dos campos longos
-  antigos** (`descricao` do projeto; `descricao`/`objetivos`/
-  `metodologia`/`cronograma` do plano; `conteudo` do relatório) e faz o
-  **upload do PDF** com a redação completa
-- **`resumo` obrigatório** (é o texto que alimenta a busca por
-  `?q=` em código/título/resumo nas listas de projetos, planos e
-  relatórios)
-- **PDF obrigatório só na submissão**:
+### 3.17 Documentos em PDF (Editais, Projetos, Planos de Trabalho e Relatórios)
+- **Redação completa em PDF, dados estruturados no sistema**: nos quatro
+  documentos o usuário preenche os metadados (datas, status, modalidade
+  etc.) e faz o **upload do PDF** com a redação completa — é o formato do
+  edital oficial da DiP, que concentra objeto, cronograma, requisitos e
+  habilitação no documento (§3.1)
+- **Texto curto no sistema, que também alimenta a busca** (`?q=`):
+  - Projetos, planos e relatórios: **`resumo`** de até 1000 caracteres,
+    **no lugar dos campos longos antigos** (`descricao` do projeto;
+    `descricao`/`objetivos`/`metodologia`/`cronograma` do plano;
+    `conteudo` do relatório) — obrigatório no formulário
+  - Edital: a **`descricao`** existente é mantida (campo opcional)
+  - Em qualquer caso a busca passa a casar **código, título e texto
+    curto** nas quatro listas
+- **PDF obrigatório só na passagem de fase** (criar e editar é livre):
+  - Edital: bloqueia a ação **`Aprovar e validar`** — o diretor/pro-reitor
+    lê o documento antes de carimbar a validação
   - Projeto: bloqueia `POST /projetos/<pk>/submeter/` (avaliação por pares)
   - Plano: bloqueia mudança de status para fora de `rascunho` no formulário
   - Relatório: bloqueia `POST /relatorios/<pk>/submeter/`
-  - Criar e editar permanece livre (rascunho sem PDF)
 - **Validação no servidor** (sem depender do navegador): extensão `.pdf`,
   **assinatura mágica `%PDF-`** no conteúdo e limite de **15 MB**
   (`apps/core/validators.validar_pdf`)
-- **Entrega por view autenticada** (`/projetos/<pk>/arquivo/`,
-  `/planos/<pk>/arquivo/`, `/relatorios/<pk>/arquivo/`) aplicando a mesma
-  permissão da tela de detalhe — **nunca `/media/` público** (os PDFs
-  podem conter dados pessoais; §6). O detalhe e a tela de avaliação
-  exibem o link; o avaliador lê o documento na própria avaliação
+- **Entrega por view autenticada** (`/editais/<pk>/arquivo/`,
+  `/projetos/<pk>/arquivo/`, `/planos/<pk>/arquivo/`,
+  `/relatorios/<pk>/arquivo/`) aplicando a mesma permissão da tela de
+  detalhe — **nunca `/media/` público** (os PDFs podem conter dados
+  pessoais; §6). O detalhe (e a tela de avaliação de relatório) exibe o
+  link, que abre em nova aba
 - **Persistência e higiene**: `MEDIA_ROOT` em volume Docker nomeado
   (`media_data:/app/media`, fora do código e do `.dockerignore`); ao
   substituir um arquivo o anterior é apagado do disco, e o mesmo ocorre
   na exclusão do registro (`ModeloComArquivo` em `apps/core/models.py`)
 - **Dados de demonstração**: o `populate_demo` anexa PDFs gerados localmente
-  (`apps/core/pdf_demo.py`, sem dependências novas) a projetos e aos
-  planos/relatórios submetidos
+  (`apps/core/pdf_demo.py`, sem dependências novas) a editais e projetos
+  e aos planos/relatórios submetidos
 
 ---
 

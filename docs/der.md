@@ -65,7 +65,8 @@
 | id | UUID | PK | Identificador único |
 | codigo | VARCHAR(50) | Sim | Código do edital (ex: PIBIC-2024-01) |
 | titulo | VARCHAR(255) | Sim | Título do edital |
-| descricao | TEXT | Não | Descrição detalhada |
+| descricao | TEXT | Não | Texto curto (resumo do edital), usado na busca — a redação completa fica no PDF |
+| arquivo_pdf | VARCHAR (upload) | Não¹ | Edital completo em PDF (`uploads/editais/AAAA/MM/`), validado no servidor (extensão, tamanho ≤ 15 MB, assinatura `%PDF-`) |
 | data_inicio | DATE | Sim | Data de abertura |
 | data_fim | DATE | Sim | Data de encerramento |
 | status | ENUM | Sim | Status: `rascunho`, `aprovado`, `em_andamento`, `encerrado`, `cancelado` |
@@ -75,6 +76,12 @@
 | data_validacao | TIMESTAMP | Não | Data de validação |
 | criado_em | TIMESTAMP | Sim | Data de criação |
 | atualizado_em | TIMESTAMP | Sim | Data de última atualização |
+
+¹ A redação oficial (objeto, cronograma, requisitos, habilitação) vive no
+PDF, anexado pelo técnico — **obrigatório para a ação `Aprovar e
+validar`**. Entrega por `GET /editais/<pk>/arquivo/` com a permissão do
+detalhe (abaixo de técnicos, só o edital em execução) — nunca por
+`/media/` público (LGPD).
 
 ---
 

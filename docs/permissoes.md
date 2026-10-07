@@ -115,9 +115,10 @@ abre solicitações LGPD, não registra consentimento e não submete propostas
 
 | Rota | Ação | Quem pode | Regra especial |
 |---|---|---|---|
-| `/editais/` e `/editais/<pk>/` | visualizar | autenticado | abaixo de técnicos: **só status em andamento** (lista filtrada + detalhe 403); propostas: téc+ todas; demais só as próprias |
-| `/editais/novo/`, `/editar/` | criar/editar | **téc+** | cria como `rascunho`; status só via ações |
-| `/editais/<pk>/acao/<acao>/` (POST) | fluxo | `aprovar` → **diretor+**; `iniciar/encerrar/cancelar` → téc+ | origem/destino do status validados |
+| `/editais/` e `/editais/<pk>/` | visualizar | autenticado | abaixo de técnicos: **só status em andamento** (lista filtrada + detalhe 403); busca `?q=` em **código, título ou descrição**; propostas: téc+ todas; demais só as próprias |
+| `/editais/novo/`, `/editar/` | criar/editar | **téc+** | cria como `rascunho`; status só via ações; aceita upload do PDF (livre até a aprovação) |
+| `/editais/<pk>/arquivo/` | baixar o PDF | autenticado | **mesma permissão do detalhe** (abaixo de técnicos, só `em_andamento` → 403); sem arquivo → 404; entrega `application/pdf` + `nosniff`, nunca por `/media/` público |
+| `/editais/<pk>/acao/<acao>/` (POST) | fluxo | `aprovar` → **diretor+**; `iniciar/encerrar/cancelar` → téc+ | origem/destino do status validados; **`aprovar` exige PDF anexado** (erro claro + status não muda) |
 | `/editais/<pk>/propostas/nova/` | criar | **somente docente** | aluno, téc+ e superusuário → 403 (não submetem); exige edital em andamento e no período, Pessoa vinculada e projeto do docente (coordena ou é membro) |
 | `/propostas/<pk>/` | visualizar | téc+ OU submetente OU avaliador alocado | senão 403 |
 | `/propostas/<pk>/editar/` | editar | téc+ ou submetente | só enquanto `submetida` |
