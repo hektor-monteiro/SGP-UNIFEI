@@ -1,14 +1,30 @@
 from django.db import models
 import uuid
-from apps.core.models import TimeStampedModel
+from apps.core.models import ModeloComArquivo, TimeStampedModel
+from apps.core.validators import validar_pdf
 from apps.bolsas.models import ModalidadeBolsa
 from apps.projetos.models import Proposta
 
-class Edital(TimeStampedModel):
+class Edital(TimeStampedModel, ModeloComArquivo):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     codigo = models.CharField(max_length=50, unique=True)
     titulo = models.CharField(max_length=255)
     descricao = models.TextField(blank=True)
+    # A redação completa do edital (objetivo, cronograma, requisitos,
+    # habilitação...) fica no documento anexado abaixo — o técnico a
+    # descreve no PDF, como no edital oficial da DiP. Obrigatório para
+    # a aprovação/validação (diretor ou pro-reitor).
+    arquivo_pdf = models.FileField(
+        upload_to='uploads/editais/%Y/%m/',
+        blank=True,
+        validators=[validar_pdf],
+        verbose_name='Documento (PDF)',
+        help_text=(
+            'Edital completo em PDF (até 15 MB). Obrigatório para '
+            'aprovar e validar.'
+        ),
+    )
+    campo_arquivo = 'arquivo_pdf'
     data_inicio = models.DateField()
     data_fim = models.DateField()
     status = models.CharField(max_length=15, choices=[

@@ -10,6 +10,8 @@ from apps.bolsas.models import ModalidadeBolsa
 
 from apps.editais.models import Edital
 
+from sgp.tests.arquivos_teste import MediaTemporariaMixin, anexar_pdf
+
 
 def _criar_usuario(username, perfil):
     user = User.objects.create_user(username, password='x')
@@ -168,14 +170,17 @@ class VisibilidadeEditalTests(TestCase):
             self.assertEqual(response.status_code, 200, edital.codigo)
 
 
-class FluxoEditalTests(TestCase):
+class FluxoEditalTests(MediaTemporariaMixin, TestCase):
     """Fluxo de vida: rascunho → aprovado → em_andamento → encerrado.
 
-    Aprovação exige nível Diretor+ (o técnico propõe, a Diretoria valida).
+    Aprovação exige nível Diretor+ (o técnico propõe, a Diretoria valida)
+    e o PDF do edital anexado — o validador lê o documento antes de
+    carimbar a validação.
     """
 
     def setUp(self):
         self.edital = _criar_edital()
+        anexar_pdf(self.edital, nome='edital-fluxo.pdf')
         _criar_usuario('tec_fluxo', Perfil.PERFIL_TECNICO)
         _criar_usuario('dir_fluxo', Perfil.PERFIL_DIRETOR)
         _criar_usuario('alu_fluxo', Perfil.PERFIL_ALUNO)

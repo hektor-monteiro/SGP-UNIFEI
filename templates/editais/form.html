@@ -14,7 +14,7 @@
         </div>
     {% endif %}
 
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {% for field in form %}
             <p>
@@ -22,6 +22,9 @@
                 {{ field }}
                 {% if field.errors %}
                     <span style="color:#b71c1c; font-size:0.85rem;">{{ field.errors|first }}</span>
+                {% endif %}
+                {% if field.help_text %}
+                    <span style="color:#666; font-size:0.8rem;">{{ field.help_text }}</span>
                 {% endif %}
             </p>
         {% endfor %}

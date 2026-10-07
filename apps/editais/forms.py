@@ -22,8 +22,8 @@ class EditalForm(forms.ModelForm):
     class Meta:
         model = Edital
         fields = [
-            'codigo', 'titulo', 'descricao', 'data_inicio', 'data_fim',
-            'modalidade', 'nota_minima',
+            'codigo', 'titulo', 'descricao', 'arquivo_pdf',
+            'data_inicio', 'data_fim', 'modalidade', 'nota_minima',
         ]
         widgets = {
             'data_inicio': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
@@ -37,6 +37,9 @@ class EditalForm(forms.ModelForm):
         self.fields['modalidade'].empty_label = '— Selecione a modalidade —'
         self.fields['modalidade'].required = False
         self.fields['descricao'].required = False
+        # O PDF nasce opcional (rascunho sem documento); a exigência é
+        # na aprovação — ver view `acao`.
+        self.fields['arquivo_pdf'].required = False
 
     def clean(self):
         cleaned = super().clean()

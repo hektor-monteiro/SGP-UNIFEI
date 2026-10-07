@@ -26,12 +26,14 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.http import Http404
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 from django.utils.timezone import localdate, now
 
+from apps.core.arquivos import servir_pdf
 from apps.core.models import Perfil
 from apps.core.permissions import perfil_de, pode_gerir
 from apps.bolsas.forms import IndicacaoForm
@@ -204,7 +206,12 @@ def lista(request):
     if modalidade:
         editais = editais.filter(modalidade__sigla=modalidade)
     if busca:
-        editais = editais.filter(titulo__icontains=busca)
+        # Busca por código, título ou descrição (padrão das listas)
+        editais = editais.filter(
+            Q(codigo__icontains=busca)
+            | Q(titulo__icontains=busca)
+            | Q(descricao__icontains=busca)
+        )
 
     perfil = perfil_de(request.user)
     gerir = pode_gerir(perfil)
@@ -270,6 +277,24 @@ def detalhe(request, pk):
 
 @login_required
 @never_cache
+def arquivo(request, pk):
+    """Entrega o PDF do edital com a MESMA permissão do detalhe.
+
+    Abaixo de técnicos só o edital em execução ('em_andamento') é
+    acessível; os demais status são gestão. O arquivo nunca é servido
+    por /media/ público (o edital pode citar dados internos — LGPD).
+    """
+    edital = get_object_or_404(Edital, pk=pk)
+    perfil = perfil_de(request.user)
+    if not pode_gerir(perfil) and edital.status != 'em_andamento':
+        raise PermissionDenied
+    if not edital.arquivo_pdf:
+        raise Http404('Este edital não tem documento anexado.')
+    return servir_pdf(edital.arquivo_pdf.path)
+
+
+@login_required
+@never_cache
 def novo(request):
     """Criação de edital (técnico+, conforme requisito §3.1)."""
     perfil = perfil_de(request.user)
@@ -277,7 +302,7 @@ def novo(request):
         raise PermissionDenied
 
     if request.method == 'POST':
-        form = EditalForm(request.POST)
+        form = EditalForm(request.POST, request.FILES)
         if form.is_valid():
             edital = form.save(commit=False)
             edital.criado_por = request.user
@@ -305,7 +330,7 @@ def editar(request, pk):
     edital = get_object_or_404(Edital, pk=pk)
 
     if request.method == 'POST':
-        form = EditalForm(request.POST, instance=edital)
+        form = EditalForm(request.POST, request.FILES, instance=edital)
         if form.is_valid():
             form.save()
             messages.success(request, f'Edital {edital.codigo} atualizado com sucesso.')
@@ -337,6 +362,16 @@ def acao(request, pk, acao):
             request,
             f'Não é possível {acao} um edital com status '
             f'"{edital.get_status_display()}".',
+        )
+        return redirect('edital_detalhe', pk=edital.pk)
+
+    # Aprovação exige o documento: a redação oficial do edital vive no
+    # PDF e quem valida (diretor/pro-reitor) precisa lê-lo.
+    if acao == 'aprovar' and not edital.arquivo_pdf:
+        messages.error(
+            request,
+            'Anexe o PDF do edital (campo "Documento (PDF)") antes de '
+            'aprovar e validar.',
         )
         return redirect('edital_detalhe', pk=edital.pk)
 
