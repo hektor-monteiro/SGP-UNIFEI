@@ -109,7 +109,7 @@ sgp/
 - Qualquer comando que modifique arquivos fora do diretório do projeto
 - `docker compose down` (pode perder dados não persistidos)
 - `docker compose exec app python manage.py flush`
-- `git push` para branch principal
+- `git push` para branch principal (atual: `main` em `origin` → GitHub)
 - `git reset --hard`
 - `rm` ou `rm -rf`
 - Comandos que instalam pacotes (`pip install`, `npm install`)
@@ -255,7 +255,7 @@ Antes de considerar qualquer tarefa concluída:
 
 - [x] Definir ferramenta de lint (ruff — `ruff.toml` + `requirements-dev.txt`)
 - [ ] Definir ferramenta de typecheck (mypy, pyright, etc.)
-- [x] Configurar CI/CD (`.github/workflows/ci.yml` — ativa no primeiro `git push`; badge e branch protegida pendem de repositório remoto)
+- [x] Configurar CI/CD (`.github/workflows/ci.yml` — no ar no GitHub: run #1 verde em 07/10/2026, com lint (ruff), 440 testes e build da imagem; badge no `README.md`; **branch protegida ainda pendente — só se configura na UI do GitHub**)
 - [ ] Definir cobertura de testes mínima
 - [ ] Configurar ambiente de staging
 - [ ] Definir processo de deploy
