@@ -11,6 +11,7 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 
 from apps.core.validators import validar_pdf
+from apps.editais.models import Edital
 from apps.projetos.models import Projeto
 from apps.relatorios.models import PlanoTrabalho, Relatorio
 
@@ -43,6 +44,14 @@ class SeedDemoDocumentosTests(TestCase):
         self.assertTrue(submetidos.exists())
         self.assertEqual(submetidos.filter(resumo='').count(), 0)
         self.assertEqual(submetidos.filter(arquivo_pdf='').count(), 0)
+
+    def test_editais_nascem_com_pdf(self):
+        """O documento oficial do edital (redação completa) vem no seed."""
+        editais = Edital.objects.all()
+        self.assertTrue(editais.exists())
+        self.assertEqual(editais.filter(arquivo_pdf='').count(), 0)
+        for edital in editais:
+            validar_pdf(edital.arquivo_pdf)  # não levanta exceção
 
     def test_arquivos_gerados_sao_pdfs_validos(self):
         """A assinatura %PDF- passa no validador do servidor."""

@@ -514,6 +514,29 @@ class Command(BaseCommand):
                     'modalidade': modalidade,
                 }
             )
+            if not edital.arquivo_pdf:
+                # Documento oficial do edital: a redação completa
+                # (objeto, cronograma, requisitos) vive no PDF
+                edital.arquivo_pdf.save(
+                    f'edital_{edital.codigo}.pdf',
+                    ContentFile(gerar_pdf(
+                        f'EDITAL {edital.codigo} - {edital.titulo}',
+                        [
+                            'Universidade Federal de Itajuba - '
+                            'Diretoria de Pesquisa (DiP).',
+                            f'Objeto: selecao de propostas para alocacao '
+                            f'de bolsas da modalidade {modalidade.sigla}.',
+                            f'Cronograma: inscricoes de '
+                            f'{edital.data_inicio:%d/%m/%Y} ate '
+                            f'{edital.data_fim:%d/%m/%Y}.',
+                            'Requisitos: projeto registrado na DiP e '
+                            'orientador com vinculo na UNIFEI.',
+                            'Documento gerado para demonstracao do '
+                            'SGP-UNIFEI.',
+                        ],
+                    )),
+                    save=True,
+                )
             editais.append(edital)
         return editais
 
