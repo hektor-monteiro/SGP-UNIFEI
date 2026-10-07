@@ -55,7 +55,7 @@
     <p style="margin-top:10px;">
         <strong>Documento (PDF):</strong>
         {% if relatorio.arquivo_pdf %}
-            <a href="{% url 'relatorio_arquivo' relatorio.pk %}" style="color:#003366;">Abrir o PDF do relatório</a>
+            <a target="_blank" rel="noopener" href="{% url 'relatorio_arquivo' relatorio.pk %}" style="color:#003366;">Abrir o PDF do relatório</a>
             <span style="color:#666; font-size:0.85rem;">(exibido em uma nova aba)</span>
         {% elif pode_editar %}
             <span style="color:#666;">Nenhum PDF anexado — anexe em "Editar". O PDF é obrigatório para submeter.</span>

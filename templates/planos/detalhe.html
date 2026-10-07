@@ -42,7 +42,7 @@
             <th>Documento (PDF)</th>
             <td>
                 {% if plano.arquivo_pdf %}
-                    <a href="{% url 'plano_arquivo' plano.pk %}" style="color:#003366;">Abrir o PDF do plano de trabalho</a>
+                    <a target="_blank" rel="noopener" href="{% url 'plano_arquivo' plano.pk %}" style="color:#003366;">Abrir o PDF do plano de trabalho</a>
                     <span style="color:#666; font-size:0.85rem;">(exibido em uma nova aba)</span>
                 {% elif pode_editar %}
                     <span style="color:#666;">Nenhum PDF anexado — anexe em "Editar". O PDF é obrigatório para submeter.</span>

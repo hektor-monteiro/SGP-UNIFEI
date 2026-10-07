@@ -27,7 +27,7 @@
     <div style="margin-top:12px; background:#f5f7fa; padding:12px; border-radius:4px;">
         <strong>Documento do relatório:</strong>
         {% if relatorio.arquivo_pdf %}
-            <a href="{% url 'relatorio_arquivo' relatorio.pk %}" style="color:#003366;">Abrir o PDF</a>
+            <a target="_blank" rel="noopener" href="{% url 'relatorio_arquivo' relatorio.pk %}" style="color:#003366;">Abrir o PDF</a>
             <span style="color:#666; font-size:0.85rem;">(o relatório completo está no anexo)</span>
         {% else %}<span style="color:#666;">Nenhum PDF anexado.</span>{% endif %}
         {% if relatorio.resumo %}
